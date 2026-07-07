@@ -1,0 +1,138 @@
+{
+  "bidio": "0.1",
+  "id": "b7d9c2e4-1f3a-4c8b-9e2d-5a6f7c8d9e0f",
+  "generator": { "name": "bidio-fixtures", "version": "0.1" },
+  "created_at": "2026-07-07T18:00:00Z",
+  "updated_at": "2026-07-07T18:00:00Z",
+  "project": {
+    "title": "Fixture Show 001",
+    "code": "FIX001",
+    "client": "Example Pictures"
+  },
+  "parties": {
+    "vendor": { "name": "Example VFX Co", "country": "CA" }
+  },
+  "currency": "CAD",
+  "departments": [
+    { "key": "comp", "label": "Compositing" },
+    { "key": "paint", "label": "Paint" },
+    { "key": "matchmove", "label": "Matchmove" },
+    { "key": "anim", "label": "Animation" },
+    { "key": "fx", "label": "FX Simulation" },
+    { "key": "lighting", "label": "Lighting" },
+    { "key": "model", "label": "Modeling" },
+    { "key": "texture", "label": "Texturing" },
+    { "key": "dmp", "label": "Digital Matte Painting" }
+  ],
+  "shot_types": [
+    { "key": "environment", "label": "Environment" },
+    { "key": "creature", "label": "Creature" },
+    { "key": "cleanup", "label": "Cleanup" },
+    { "key": "fx", "label": "FX" }
+  ],
+  "rate_card": {
+    "comp": 800,
+    "paint": 550,
+    "matchmove": 600,
+    "anim": 900,
+    "fx": 950,
+    "lighting": 850,
+    "model": 750,
+    "texture": 700,
+    "dmp": 850
+  },
+  "shots": [
+    {
+      "id": "sh-010",
+      "code": "010",
+      "description": "Establishing city extension",
+      "sequence": "SEQ01",
+      "type": "environment",
+      "difficulty": "medium",
+      "tags": ["city", "set-extension"],
+      "quantity": 1,
+      "efforts": { "comp": 4, "dmp": 6, "matchmove": 2 }
+    },
+    {
+      "id": "sh-020",
+      "code": "020",
+      "description": "Hero creature reveal",
+      "sequence": "SEQ01",
+      "type": "creature",
+      "difficulty": "high",
+      "tags": ["creature", "rain"],
+      "quantity": 1,
+      "efforts": { "model": 10, "texture": 8, "anim": 15, "lighting": 12, "comp": 10 }
+    },
+    {
+      "id": "sh-030",
+      "code": "030",
+      "description": "Wire and rig removal batch",
+      "sequence": "SEQ02",
+      "type": "cleanup",
+      "difficulty": "low",
+      "quantity": 8,
+      "efforts": { "comp": 1.5, "paint": 2 }
+    },
+    {
+      "id": "sh-040",
+      "code": "040",
+      "description": "Dam break water sim",
+      "sequence": "SEQ02",
+      "type": "fx",
+      "difficulty": "high",
+      "tags": ["water", "destruction"],
+      "quantity": 1,
+      "efforts": { "fx": 14, "lighting": 8, "comp": 6 }
+    },
+    {
+      "id": "sh-050",
+      "code": "050",
+      "description": "Valley flyover pair",
+      "sequence": "SEQ03",
+      "type": "environment",
+      "difficulty": "medium",
+      "quantity": 2,
+      "efforts": { "dmp": 5, "comp": 3.5, "matchmove": 1 }
+    }
+  ],
+  "line_items": [
+    {
+      "id": "li-1",
+      "label": "VFX supervision",
+      "kind": "supervision",
+      "quantity": 10,
+      "unit": "day",
+      "unit_cost": 1200
+    },
+    {
+      "id": "li-2",
+      "label": "Editorial support",
+      "kind": "editorial",
+      "quantity": 5,
+      "unit": "day",
+      "unit_cost": 600
+    }
+  ],
+  "incentives": [
+    {
+      "jurisdiction": "CA-QC",
+      "program": "QPSTC-simplified",
+      "labour_share": 0.65,
+      "labour_rate": 0.25,
+      "nonlabour_rate": 0.2
+    }
+  ],
+  "totals": {
+    "shots_subtotal": 112900,
+    "line_items_subtotal": 15000,
+    "gross": 127900,
+    "incentive_credit": 29736.75,
+    "net": 98163.25
+  },
+  "revision": { "number": 1, "locked": false, "supersedes": null },
+  "award": { "status": "draft" },
+  "extensions": {
+    "com.example": { "note": "extensions travel with the file; unknown namespaces are ignored" }
+  }
+}
