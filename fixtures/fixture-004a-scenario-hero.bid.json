@@ -1,0 +1,69 @@
+{
+  "bidio": "0.2",
+  "id": "68f59751-7358-4516-86db-5f115534c048",
+  "bid_id": "06680901-02a8-4f83-8c23-911bedcb4198",
+  "conformance": "M1",
+  "generator": { "name": "bidio-fixtures", "version": "0.2" },
+  "created_at": "2026-07-11T18:00:00Z",
+  "updated_at": "2026-07-11T18:00:00Z",
+  "project": {
+    "title": "Fixture Show 004 - Skyline",
+    "code": "FIX004",
+    "client": "Example Pictures",
+    "kind": "feature"
+  },
+  "parties": {
+    "vendor": { "name": "Example VFX Co", "country": "CA" }
+  },
+  "currency": "USD",
+  "departments": [
+    { "key": "comp", "label": "Compositing" },
+    { "key": "fx", "label": "FX Simulation" }
+  ],
+  "rate_card": {
+    "comp": 850,
+    "fx": 1000
+  },
+  "shots": [
+    {
+      "id": "sh-010",
+      "code": "010",
+      "description": "Tower collapse, full CG debris and dust",
+      "type": "fx",
+      "difficulty": "high",
+      "quantity": 1,
+      "efforts": { "comp": 8, "fx": 6 },
+      "notes": "Hero scenario: full simulation treatment"
+    },
+    {
+      "id": "sh-020",
+      "code": "020",
+      "description": "Aftermath street extension",
+      "type": "environment",
+      "difficulty": "medium",
+      "quantity": 1,
+      "efforts": { "comp": 4 }
+    }
+  ],
+  "line_items": [
+    {
+      "id": "li-1",
+      "label": "VFX supervision",
+      "kind": "supervision",
+      "quantity": 4,
+      "unit": "day",
+      "unit_cost": 1200
+    }
+  ],
+  "incentives": [],
+  "totals": {
+    "shots_subtotal": 16200,
+    "line_items_subtotal": 4800,
+    "gross": 21000,
+    "incentive_credit": 0,
+    "net": 21000
+  },
+  "revision": { "number": 1, "variant": "hero", "locked": false, "supersedes": null },
+  "award": { "status": "draft" },
+  "extensions": {}
+}

@@ -1,13 +1,15 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://bidio.dev/schema/0.1/bidio.schema.json",
-  "title": "bidIO bid document, v0.1 (draft)",
+  "$id": "https://bidio.dev/schema/0.2/bidio.schema.json",
+  "title": "bidIO bid document, v0.2 (draft)",
   "type": "object",
   "additionalProperties": false,
-  "required": ["bidio", "id", "project", "currency", "shots", "totals"],
+  "required": ["bidio", "id", "conformance", "project", "currency", "shots", "totals"],
   "properties": {
-    "bidio": { "type": "string", "pattern": "^0\\.1(\\.\\d+)?$" },
+    "bidio": { "type": "string", "pattern": "^0\\.2(\\.\\d+)?$" },
     "id": { "type": "string", "format": "uuid" },
+    "bid_id": { "type": "string", "format": "uuid" },
+    "conformance": { "enum": ["M1", "M1-Multisite", "M1-Series", "M1-Full"] },
     "generator": {
       "type": "object",
       "additionalProperties": false,
@@ -25,7 +27,8 @@
       "properties": {
         "title": { "type": "string", "minLength": 1 },
         "code": { "type": "string" },
-        "client": { "type": "string" }
+        "client": { "type": "string" },
+        "kind": { "type": "string" }
       }
     },
     "parties": {
@@ -46,6 +49,37 @@
         "properties": {
           "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
           "rate": { "type": "number", "exclusiveMinimum": 0 }
+        }
+      }
+    },
+    "sites": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "jurisdiction"],
+        "properties": {
+          "key": { "$ref": "#/$defs/siteKey" },
+          "label": { "type": "string" },
+          "jurisdiction": { "type": "string", "minLength": 2 },
+          "rate_card": { "$ref": "#/$defs/rateCard" }
+        }
+      }
+    },
+    "episodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code"],
+        "properties": {
+          "code": { "$ref": "#/$defs/episodeCode" },
+          "title": { "type": "string" },
+          "frames": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": { "count": { "type": "integer", "minimum": 0 } }
+          }
         }
       }
     },
@@ -74,13 +108,7 @@
         }
       }
     },
-    "rate_card": {
-      "type": "object",
-      "additionalProperties": false,
-      "patternProperties": {
-        "^[a-z][a-z0-9_]*$": { "type": "number", "minimum": 0 }
-      }
-    },
+    "rate_card": { "$ref": "#/$defs/rateCard" },
     "shots": {
       "type": "array",
       "items": { "$ref": "#/$defs/shot" }
@@ -93,6 +121,20 @@
       "type": "array",
       "items": { "$ref": "#/$defs/incentive" }
     },
+    "references": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "uri"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "uri": { "type": "string", "minLength": 1 },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "kind": { "type": "string" }
+        }
+      }
+    },
     "totals": {
       "type": "object",
       "additionalProperties": false,
@@ -102,7 +144,21 @@
         "line_items_subtotal": { "type": "number" },
         "gross": { "type": "number" },
         "incentive_credit": { "type": "number" },
-        "net": { "type": "number" }
+        "net": { "type": "number" },
+        "by_site": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[a-z][a-z0-9_-]*$": { "$ref": "#/$defs/totalsBlock" }
+          }
+        },
+        "by_episode": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[A-Za-z0-9][A-Za-z0-9_-]*$": { "$ref": "#/$defs/totalsBlock" }
+          }
+        }
       }
     },
     "revision": {
@@ -111,6 +167,7 @@
       "required": ["number"],
       "properties": {
         "number": { "type": "integer", "minimum": 1 },
+        "variant": { "type": "string", "minLength": 1 },
         "locked": { "type": "boolean" },
         "supersedes": { "type": ["string", "null"], "format": "uuid" }
       }
@@ -128,8 +185,22 @@
     },
     "extensions": { "$ref": "#/$defs/extensions" }
   },
+  "if": {
+    "required": ["revision"],
+    "properties": { "revision": { "required": ["variant"] } }
+  },
+  "then": { "required": ["bid_id"] },
   "$defs": {
     "deptKey": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "siteKey": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
+    "episodeCode": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$" },
+    "rateCard": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-z][a-z0-9_]*$": { "type": "number", "minimum": 0 }
+      }
+    },
     "party": {
       "type": "object",
       "additionalProperties": false,
@@ -142,6 +213,18 @@
       "type": "object",
       "propertyNames": { "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$" },
       "additionalProperties": { "type": "object" }
+    },
+    "totalsBlock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gross", "incentive_credit", "net"],
+      "properties": {
+        "shots_subtotal": { "type": "number" },
+        "line_items_subtotal": { "type": "number" },
+        "gross": { "type": "number" },
+        "incentive_credit": { "type": "number" },
+        "net": { "type": "number" }
+      }
     },
     "shot": {
       "type": "object",
@@ -156,6 +239,8 @@
         "difficulty": { "type": "string" },
         "tags": { "type": "array", "items": { "type": "string" } },
         "quantity": { "type": "number", "exclusiveMinimum": 0, "default": 1 },
+        "execution_site": { "$ref": "#/$defs/siteKey" },
+        "episode": { "$ref": "#/$defs/episodeCode" },
         "frames": {
           "type": "object",
           "additionalProperties": false,
@@ -188,6 +273,8 @@
         "quantity": { "type": "number", "minimum": 0 },
         "unit": { "type": "string" },
         "unit_cost": { "type": "number", "minimum": 0 },
+        "execution_site": { "$ref": "#/$defs/siteKey" },
+        "episode": { "$ref": "#/$defs/episodeCode" },
         "extensions": { "$ref": "#/$defs/extensions" }
       }
     },
@@ -198,6 +285,11 @@
       "properties": {
         "jurisdiction": { "type": "string", "minLength": 2 },
         "program": { "type": "string" },
+        "sites": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/siteKey" },
+          "minItems": 1
+        },
         "labour_share": { "type": "number", "minimum": 0, "maximum": 1 },
         "labour_rate": { "type": "number", "minimum": 0, "maximum": 1 },
         "nonlabour_rate": { "type": "number", "minimum": 0, "maximum": 1 },

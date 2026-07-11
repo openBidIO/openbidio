@@ -1,0 +1,143 @@
+{
+  "bidio": "0.2",
+  "id": "559e9456-10df-4b26-af85-eb18740efa16",
+  "bid_id": "7a562933-5d75-40d5-addb-cc4468835cd3",
+  "conformance": "M1-Multisite",
+  "generator": { "name": "bidio-fixtures", "version": "0.2" },
+  "created_at": "2026-07-11T18:00:00Z",
+  "updated_at": "2026-07-11T18:00:00Z",
+  "project": {
+    "title": "Fixture Show 002 - Two Cities",
+    "code": "FIX002",
+    "client": "Example Pictures",
+    "kind": "feature"
+  },
+  "parties": {
+    "vendor": { "name": "Example VFX Co", "country": "CA" }
+  },
+  "currency": "CAD",
+  "sites": [
+    {
+      "key": "mtl",
+      "label": "Montreal",
+      "jurisdiction": "CA-QC",
+      "rate_card": { "comp": 800, "fx": 950, "anim": 900 }
+    },
+    {
+      "key": "lon",
+      "label": "London",
+      "jurisdiction": "GB-ENG",
+      "rate_card": { "comp": 1000, "anim": 1100 }
+    }
+  ],
+  "departments": [
+    { "key": "comp", "label": "Compositing" },
+    { "key": "fx", "label": "FX Simulation" },
+    { "key": "anim", "label": "Animation" }
+  ],
+  "shots": [
+    {
+      "id": "sh-010",
+      "code": "010",
+      "description": "Creature interaction, plate cleanup heavy",
+      "type": "creature",
+      "difficulty": "medium",
+      "quantity": 1,
+      "execution_site": "mtl",
+      "efforts": { "comp": 5, "fx": 3 }
+    },
+    {
+      "id": "sh-020",
+      "code": "020",
+      "description": "Screen comp batch",
+      "type": "cleanup",
+      "difficulty": "low",
+      "quantity": 4,
+      "execution_site": "mtl",
+      "efforts": { "comp": 2.5 }
+    },
+    {
+      "id": "sh-030",
+      "code": "030",
+      "description": "Hero character animation and comp",
+      "type": "character",
+      "difficulty": "high",
+      "quantity": 1,
+      "execution_site": "lon",
+      "efforts": { "comp": 6, "anim": 4 }
+    },
+    {
+      "id": "sh-040",
+      "code": "040",
+      "description": "Flat-priced stock element comps",
+      "type": "cleanup",
+      "difficulty": "low",
+      "quantity": 2,
+      "execution_site": "lon",
+      "unit_price": 3500
+    }
+  ],
+  "line_items": [
+    {
+      "id": "li-1",
+      "label": "VFX supervision",
+      "kind": "supervision",
+      "quantity": 5,
+      "unit": "day",
+      "unit_cost": 1200,
+      "execution_site": "mtl"
+    },
+    {
+      "id": "li-2",
+      "label": "Editorial support (site-neutral)",
+      "kind": "editorial",
+      "quantity": 4,
+      "unit": "day",
+      "unit_cost": 800
+    }
+  ],
+  "incentives": [
+    {
+      "jurisdiction": "CA-QC",
+      "program": "QPSTC-simplified",
+      "sites": ["mtl"],
+      "labour_share": 0.6,
+      "labour_rate": 0.25,
+      "nonlabour_rate": 0.2
+    },
+    {
+      "jurisdiction": "GB",
+      "program": "AVEC-simplified",
+      "sites": ["lon"],
+      "labour_share": 0.7,
+      "labour_rate": 0.25,
+      "nonlabour_rate": 0.15
+    }
+  ],
+  "totals": {
+    "shots_subtotal": 32250,
+    "line_items_subtotal": 9200,
+    "gross": 41450,
+    "incentive_credit": 8623.5,
+    "net": 32826.5,
+    "by_site": {
+      "mtl": {
+        "shots_subtotal": 14850,
+        "line_items_subtotal": 6000,
+        "gross": 20850,
+        "incentive_credit": 4795.5,
+        "net": 16054.5
+      },
+      "lon": {
+        "shots_subtotal": 17400,
+        "line_items_subtotal": 0,
+        "gross": 17400,
+        "incentive_credit": 3828,
+        "net": 13572
+      }
+    }
+  },
+  "revision": { "number": 1, "locked": false, "supersedes": null },
+  "award": { "status": "draft" },
+  "extensions": {}
+}

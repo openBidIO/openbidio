@@ -1,0 +1,129 @@
+{
+  "bidio": "0.2",
+  "id": "f4ae60b0-42a1-42d1-ac9d-f45ad2a61bd2",
+  "bid_id": "a70c65af-e29d-4c80-a5b7-f2e4e4c73cbc",
+  "conformance": "M1-Series",
+  "generator": { "name": "bidio-fixtures", "version": "0.2" },
+  "created_at": "2026-07-11T18:00:00Z",
+  "updated_at": "2026-07-11T18:00:00Z",
+  "project": {
+    "title": "Fixture Show 003 - The Series",
+    "code": "FIX003",
+    "client": "Example Streaming",
+    "kind": "series"
+  },
+  "parties": {
+    "vendor": { "name": "Example VFX Co", "country": "CA" }
+  },
+  "currency": "USD",
+  "episodes": [
+    { "code": "ep101", "title": "Pilot" },
+    { "code": "ep102", "title": "The Storm" }
+  ],
+  "departments": [
+    { "key": "comp", "label": "Compositing" },
+    { "key": "fx", "label": "FX Simulation" },
+    { "key": "anim", "label": "Animation" }
+  ],
+  "rate_card": {
+    "comp": 900,
+    "fx": 1000,
+    "anim": 1050
+  },
+  "shots": [
+    {
+      "id": "sh-101-010",
+      "code": "101_010",
+      "description": "Establishing aerial",
+      "type": "environment",
+      "difficulty": "low",
+      "quantity": 1,
+      "episode": "ep101",
+      "efforts": { "comp": 4 }
+    },
+    {
+      "id": "sh-101-020",
+      "code": "101_020",
+      "description": "Window burn-in with rain sim",
+      "type": "fx",
+      "difficulty": "medium",
+      "quantity": 1,
+      "episode": "ep101",
+      "efforts": { "comp": 3, "fx": 2 }
+    },
+    {
+      "id": "sh-102-010",
+      "code": "102_010",
+      "description": "Creature walk cycle in market",
+      "type": "creature",
+      "difficulty": "high",
+      "quantity": 1,
+      "episode": "ep102",
+      "efforts": { "anim": 6, "comp": 5 }
+    },
+    {
+      "id": "sh-102-020",
+      "code": "102_020",
+      "description": "Flat-priced monitor comps",
+      "type": "cleanup",
+      "difficulty": "low",
+      "quantity": 3,
+      "episode": "ep102",
+      "unit_price": 1500
+    }
+  ],
+  "line_items": [
+    {
+      "id": "li-sup",
+      "label": "VFX supervision (season overhead, untagged)",
+      "kind": "supervision",
+      "quantity": 8,
+      "unit": "day",
+      "unit_cost": 1300
+    },
+    {
+      "id": "li-ed",
+      "label": "Editorial support ep102",
+      "kind": "editorial",
+      "quantity": 5,
+      "unit": "day",
+      "unit_cost": 700,
+      "episode": "ep102"
+    }
+  ],
+  "incentives": [
+    {
+      "jurisdiction": "CA-BC",
+      "program": "FIBC-simplified",
+      "labour_share": 0.6,
+      "labour_rate": 0.25,
+      "nonlabour_rate": 0.1
+    }
+  ],
+  "totals": {
+    "shots_subtotal": 23600,
+    "line_items_subtotal": 13900,
+    "gross": 37500,
+    "incentive_credit": 7125,
+    "net": 30375,
+    "by_episode": {
+      "ep101": {
+        "shots_subtotal": 8300,
+        "line_items_subtotal": 0,
+        "gross": 8300,
+        "incentive_credit": 1577,
+        "net": 6723
+      },
+      "ep102": {
+        "shots_subtotal": 15300,
+        "line_items_subtotal": 3500,
+        "gross": 18800,
+        "incentive_credit": 3572,
+        "net": 15228
+      }
+    }
+  },
+  "revision": { "number": 1, "locked": false, "supersedes": null },
+  "award": { "status": "draft" },
+  "extensions": {}
+}
