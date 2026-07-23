@@ -1,0 +1,78 @@
+{
+  "bidio": "0.3",
+  "id": "5d1f9a2b-7c4e-4b6a-9e8d-2f3a4b5c6d7e",
+  "bid_id": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+  "conformance": "M1",
+  "generator": { "name": "handmade-fixture", "version": "0.3" },
+  "created_at": "2026-07-23T20:00:00Z",
+  "updated_at": "2026-07-23T20:00:00Z",
+
+  "project": { "title": "Discount + overhead worked example", "kind": "feature" },
+  "parties": { "vendor": { "name": "Example VFX" } },
+  "currency": "USD",
+
+  "departments": [
+    { "key": "comp", "label": "Compositing" },
+    { "key": "anim", "label": "Animation" }
+  ],
+  "rate_card": { "comp": 800, "anim": 1000 },
+
+  "overheads": [
+    { "key": "production", "label": "Production overhead", "rate": 0.10 },
+    { "key": "buffer", "label": "Contingency buffer", "rate": 0.05 }
+  ],
+
+  "shots": [
+    {
+      "id": "sh-010", "code": "010",
+      "description": "Cleanup pass, 10% client discount",
+      "quantity": 1,
+      "efforts": { "comp": 5 },
+      "discount": 0.10
+    },
+    {
+      "id": "sh-020", "code": "020",
+      "description": "Creature pair, half the spend is labour",
+      "quantity": 2,
+      "efforts": { "anim": 3, "comp": 2 },
+      "labour_share": 0.5
+    },
+    {
+      "id": "sh-030", "code": "030",
+      "description": "Stock elements at unit price, no labour",
+      "quantity": 3,
+      "unit_price": 1000,
+      "discount": 0.20,
+      "labour_share": 0.0
+    }
+  ],
+
+  "line_items": [
+    {
+      "id": "li-1", "label": "VFX supervision", "kind": "supervision",
+      "quantity": 10, "unit": "day", "unit_cost": 1200,
+      "discount": 0.05
+    }
+  ],
+
+  "incentives": [
+    {
+      "jurisdiction": "CA-QC", "program": "EXAMPLE",
+      "labour_share": 0.65, "labour_rate": 0.30, "nonlabour_rate": 0.10
+    }
+  ],
+
+  "totals": {
+    "shots_subtotal": 15200,
+    "line_items_subtotal": 11400,
+    "discount_total": 1600,
+    "overhead_total": 3990,
+    "gross": 30590,
+    "incentive_credit": 6447.70,
+    "net": 24142.30
+  },
+
+  "revision": { "number": 1, "locked": false, "supersedes": null },
+  "award": { "status": "draft" },
+  "extensions": {}
+}

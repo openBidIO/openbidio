@@ -1,10 +1,16 @@
-# bidIO v0.2 - the bid document format (DRAFT for the group)
+# bidIO v0.3 - the bid document format (DRAFT for the group)
 
-Status: **draft 0.2, for discussion.** Supersedes draft 0.1 (2026-07-07).
-This revision integrates the group's feedback on the 0.1 draft
-(per-shot site + rebate, scenarios, episodic structure) and adds the
-identity and conformance machinery a long-lived standard needs. Section 8
-lists exactly what changed and why; section 9 lists the open questions.
+Status: **draft 0.3, for discussion.** Supersedes draft 0.2 (2026-07-11).
+This revision promotes three things real bids kept needing into core:
+per-item **discounts**, document-level **overhead lines**, and per-item
+**labour_share** for incentive fidelity. All were previously only
+expressible by baking numbers into prices or hiding them in extensions -
+both of which lose information a second tool needs. Section 8 lists
+exactly what changed and why; section 9 lists the open questions.
+CHANGELOG.md carries the full version history.
+
+**Convention: every rate, share, and discount in bidIO is a 0..1
+decimal** (0.10 = 10%). No field anywhere in the format uses 0..100.
 
 ## 1. What this is (and is not)
 
@@ -41,7 +47,7 @@ as a group decision.
 
 ```json
 {
-  "bidio": "0.2",
+  "bidio": "0.3",
   "id": "b7d9c2e4-1f3a-4c8b-9e2d-5a6f7c8d9e0f",
   "bid_id": "0f4e2d9a-8c1b-4a7e-b3d5-6c9f8e7a2b1c",
   "conformance": "M1",
@@ -62,6 +68,7 @@ as a group decision.
   "shot_types":  [ { "key": "environment", "label": "Environment" } ],
 
   "rate_card": { "comp": 800, "fx": 950 },
+  "overheads":  [ ... see 2.9 ... ],
 
   "shots":      [ ... see 2.4 ... ],
   "line_items": [ ... see 2.5 ... ],
@@ -96,6 +103,7 @@ conditional: `revision.variant` requires `bid_id`).
 | `departments` | Optional declarations of department keys used in `efforts` and rate cards. Open vocabulary; recommended canonical keys: `comp, roto, paint, matchmove, anim, fx, lighting, lookdev, model, texture, groom, cloth, crowd, dmp, edit`. |
 | `shot_types` | Optional declaration of the shot-type taxonomy used by `shots[].type`. |
 | `rate_card` | Document-level day rates per department, in `currency`. The DEFAULT card - see rate resolution in 2.2. |
+| `overheads` | Document-level percentage lines (production overhead, contingency) computed on the post-discount item base. See 2.9. |
 | `references` | Links to external documents by URI + hash. See 2.8. Nothing is ever embedded. |
 | `revision` | `number` (1..n), `variant` (scenario name, see 2.1), `locked` (a sent bid is locked = byte-frozen by convention), `supersedes` (document `id` of the prior revision). |
 | `award` | Lifecycle: `draft`, `submitted`, `awarded`, `declined`, `withdrawn` (+ optional timestamps, `client_reference`). Multi-vendor award ALLOCATION remains M2 - reserved, not specified here. |
@@ -193,6 +201,8 @@ Series bids declare their episodes and tag items to them:
   "frames": { "count": 240 },
   "efforts": { "model": 10, "texture": 8, "anim": 15, "lighting": 12, "comp": 10 },
   "unit_price": null,
+  "discount": 0.10,
+  "labour_share": 0.8,
   "notes": "",
   "extensions": {}
 }
@@ -209,6 +219,12 @@ Series bids declare their episodes and tag items to them:
   (recommend quarter-day increments).
 - `unit_price`: optional override - if present, the shot prices as
   `quantity x unit_price` and `efforts` become informational.
+- `discount` (0..1, NEW in 0.3): applied to the item's base cost -
+  `cost = base x (1 - discount)`. See 2.9.
+- `labour_share` (0..1, NEW in 0.3): the labour fraction of THIS item's
+  cost, overriding the incentive's document default for this item. A
+  stock-footage purchase carries `labour_share: 0`, a pure-artist shot
+  `1`. See 2.6.
 - `execution_site` / `episode`: optional membership tags (2.2, 2.3).
 
 ### 2.5 Line items (non-shot costs)
@@ -221,7 +237,8 @@ Series bids declare their episodes and tag items to them:
 
 `kind` recommended vocabulary: `supervision | onset | editorial |
 management | data | other`. Line items take the same optional
-`execution_site` and `episode` tags as shots, with the same semantics.
+`execution_site` and `episode` tags as shots, with the same semantics -
+and the same optional `discount` and `labour_share` fields (2.4, 2.9).
 
 ### 2.6 Incentives (v0.2 model)
 
@@ -244,6 +261,12 @@ management | data | other`. Line items take the same optional
   top-offs) - that intelligence lives in the shared tax-incentive
   service, which fills these fields and/or attaches full detail under
   `extensions`.
+- `labour_share` here is the DOCUMENT DEFAULT: the labour fraction
+  assumed for items that do not declare their own. An item's own
+  `labour_share` (2.4, NEW in 0.3) overrides it for that item, so a
+  bid mixing artist work with purchases computes per-item credits that
+  actually track where the labour is, instead of smearing one blended
+  share across everything.
 
 ### 2.7 Totals
 
@@ -272,6 +295,13 @@ file without implementing the math.
   declared episode codes. Untagged (overhead) items belong to no
   episode block.
 
+- `discount_total` (optional, NEW in 0.3): sum of per-item discount
+  amounts (base minus discounted cost). Declare it when any item
+  carries a `discount` - clients want to see what they saved.
+- `overhead_total` (optional, NEW in 0.3): sum of the `overheads`
+  amounts. `gross` INCLUDES it: subtotals + overheads = gross.
+  Overheads never appear inside `by_site` / `by_episode` blocks (2.9).
+
 Note what is absent: margin, internal cost, burn, resourcing. Those are
 vendor-private by design.
 
@@ -292,6 +322,47 @@ embedded. bidIO files stay small, human-readable, and diffable.
 rate_card | contract | other`. (This resolves v0.1 open question #6:
 `client_bid_ref` generalized.)
 
+### 2.9 Discounts and overheads (NEW in 0.3)
+
+Both existed in real bids long before this format did; v0.2 could only
+bake them into prices, which destroys exactly the information a second
+tool needs to renegotiate or rescale a bid. v0.3 makes both first-class
+and computable.
+
+**Discounts** are per-item: an optional `discount` (0..1) on any shot
+or line item. The item's cost is `base x (1 - discount)` where `base`
+is the undiscounted computation (efforts x rates, or quantity x
+unit_price / unit_cost). There is no document-level discount field: "8%
+across the bid" is written by stamping each item, which keeps every
+rollup a plain sum over items and makes mixed discounting (hero shots
+full price, volume shots discounted) representable for free. Subtotals
+and `gross` are post-discount; the optional `totals.discount_total`
+carries the total amount conceded.
+
+**Overheads** are document-level percentage lines:
+
+```json
+"overheads": [
+  { "key": "production", "label": "Production overhead", "rate": 0.10 },
+  { "key": "buffer", "label": "Contingency buffer", "rate": 0.05 }
+]
+```
+
+- Each line's amount = `rate x (shots_subtotal + line_items_subtotal)`
+  - the post-discount item base. Change a shot's efforts and the
+  overhead rescales; that recompute-on-change is why overheads pass
+  the core-inclusion test ("does a second tool need this field to
+  recompute the same totals?") and a fixed line item does not.
+- `gross` = item base + overhead amounts.
+- Overheads are **site-neutral and episode-untagged by definition**:
+  in a multi-site file no site-scoped incentive applies to them (the
+  same rule as any site-neutral item), in a single-site file the
+  document-wide incentive does (at its default `labour_share`), and
+  they appear in document totals only - never inside a `by_site` or
+  `by_episode` block.
+- `key` is a unique handle (verifier-enforced); the recommended
+  vocabulary is `production | buffer | other`.
+
 ## 3. Normative computation (what "conformant" means)
 
 The unit of computation is the **item** (a shot or a line item). All
@@ -302,33 +373,45 @@ This item-level formulation is what makes every partition deterministic.
    its site's `rate_card` if `execution_site` is set and that site
    declares one; else the document `rate_card`. Every department in the
    shot's `efforts` MUST exist in the resolved card.
-2. **Item cost.**
+2. **Item base cost.**
    Shot: `quantity x unit_price` if `unit_price` is set, else
    `quantity x SUM over departments( efforts[dept] x resolved_rate[dept] )`.
    Line item: `quantity x unit_cost`.
-3. **Item incentive rate.** An incentive **applies** to an item when:
-   the file has no `sites` block and the incentive has no `sites` list
-   (single-site: applies to every item); or the item's `execution_site`
-   is in the incentive's `sites` list. The item's incentive rate is the
-   sum over applying incentives of
-   `labour_share x labour_rate + (1 - labour_share) x nonlabour_rate`.
-   Site-neutral items in a multi-site file have rate 0.
-4. **Item credit** = item cost x item incentive rate.
-5. **Document totals**: `shots_subtotal` = sum of shot costs;
-   `line_items_subtotal` = sum of line-item costs;
-   `gross` = their sum; `incentive_credit` = sum of ALL item credits;
+3. **Item cost** = base cost x `(1 - discount)`, where `discount`
+   defaults to 0. The item's discount amount is base minus cost.
+4. **Overhead lines** (document-level): each overhead's amount =
+   `rate x (sum of ALL item costs)` - the post-discount item base.
+   Overhead amounts are site-neutral, episode-untagged entries in the
+   computation pool.
+5. **Entry incentive rate.** An incentive **applies** to an entry
+   (item or overhead amount) when: the file has no `sites` block and
+   the incentive has no `sites` list (single-site: applies to every
+   entry); or the entry's `execution_site` is in the incentive's
+   `sites` list. The entry's incentive rate is the sum over applying
+   incentives of `ls x labour_rate + (1 - ls) x nonlabour_rate`, where
+   `ls` is the ITEM's own `labour_share` if declared, else the
+   incentive's `labour_share`. Overhead amounts always use the
+   incentive's default share. Site-neutral entries in a multi-site
+   file (including all overheads) have rate 0.
+6. **Entry credit** = entry cost x entry incentive rate.
+7. **Document totals**: `shots_subtotal` = sum of shot costs;
+   `line_items_subtotal` = sum of line-item costs; `overhead_total` =
+   sum of overhead amounts; `discount_total` = sum of item discount
+   amounts; `gross` = shots_subtotal + line_items_subtotal +
+   overhead_total; `incentive_credit` = sum of ALL entry credits;
    `net` = gross - incentive_credit.
-6. **Partition totals**: a `by_site` block sums exactly the items
+8. **Partition totals**: a `by_site` block sums exactly the items
    tagged to that site; a `by_episode` block sums exactly the items
-   tagged to that episode. Untagged items appear only in document
-   totals. Invariant (checked at full precision): partition blocks plus
-   untagged items reconcile exactly to document totals.
-7. **Rounding**: compute at full precision; round each REPORTED field
+   tagged to that episode. Untagged items and ALL overhead amounts
+   appear only in document totals. Invariant (checked at full
+   precision): partition blocks plus untagged entries reconcile
+   exactly to document totals.
+9. **Rounding**: compute at full precision; round each REPORTED field
    to 2 decimals, half-up; verifiers compare with tolerance 0.005 per
    field. Because each reported field rounds independently, the sum of
    rounded partition blocks MAY differ from the rounded document total
    by cents - that is arithmetic, not nonconformance. The invariant in
-   rule 6 binds at full precision only.
+   rule 8 binds at full precision only.
 
 A file is **conformant** when it (a) validates against
 `bidio.schema.json`, (b) declares a profile that covers the features it
@@ -412,20 +495,18 @@ engines, services, and models built on it remain their authors'
 property. (Precedent: ACES - academy-published first, SMPTE-ratified
 second. Precedent for the open-format/closed-tooling split: PDF, USD.)
 
-## 8. Changes since v0.1 (and why)
+## 8. Changes since v0.2 (and why)
 
 | Change | Why |
 |---|---|
-| `bid_id` + `revision.variant` | Scenarios needed an anchor; revisions needed a stable family identity. One field each, no container format. |
-| `sites` + `execution_site` + per-site `rate_card` + incentive `sites` scoping | v0.1 computed incentives on document gross - wrong the moment a bid spans jurisdictions. Rates vary by site for the same reason rebates do; fixing one without the other would leave the totals just as wrong. |
-| Mandatory incentive scoping in multi-site files | "Default = applies to everything" is a silent-wrong-answer generator. Defaults must make the wrong thing impossible. |
-| `episodes` + `episode` tags + `by_episode` | Episodic bids are structurally different (Marie's #4). v0.2 adds the PRIMITIVES; it does not dictate one-file-per-season vs one-file-per-episode. |
-| `conformance` profiles | An A-grade format must let a simple tool say "I only do M1" and still be a full citizen. Declared profiles + verifier cross-check replace guessing. |
-| Item-level normative math | The v0.1 gross-level formula could not express per-site credits. Item-level formulation makes every rollup a sum - deterministic, verifiable. |
-| `references` | Resolves v0.1 open question #6 generically. URI + hash, never embedded blobs. |
-| `project.kind` | Advisory only. Producers filter on it; the math never reads it. |
-| 0.x exact-minor version rule | v0.1's "accept same major" rule was wrong for 0.x, where minors may break. |
-| Resourcing explicitly routed to extensions + federation path | Blended rates preserve totals; resourcing is vendor-internal decomposition. The federation path (section 6) is the honest answer to "but we need it": ship it in your namespace, converge, promote. |
+| Per-item `discount` (0..1) + `totals.discount_total` | Real bids ship with discounts - per line and across the bid. v0.2 could only bake the net into prices, destroying the gross/discount story a client statement and a renegotiation both need. Item-level keeps every rollup a plain sum and makes mixed discounting free. |
+| `overheads` percentage lines + `totals.overhead_total` | Production overhead and contingency are percentages OF the work, not fixed lines: change a shot's efforts and the overhead must rescale. That recompute-on-change is precisely the core-inclusion test. Site-neutral and partition-excluded by definition. |
+| Per-item `labour_share` override | The v0.2 incentive model smeared one blended labour share across every item, so per-item credits were fiction the moment a bid mixed artist work with purchases. The item override keeps the simple linear model AND makes per-item credits track reality. Program intricacies (caps, top-offs) stay in the tax service / extensions. |
+| Rates convention stated normatively | Every rate, share, and discount in the format is a 0..1 decimal. Mixed 0..100 / 0..1 conventions are a classic silent-wrong-answer generator. |
+| `CHANGELOG.md` | The version history moved out of this section into a proper changelog; this section now only diffs against the immediately-prior draft. |
+| Verifier: handle uniqueness enforced (0.2.x fix, carried) | A duplicated site key silently double-priced a test document (last declaration won). Uniqueness of every handle - site keys, episode codes, shot/line-item ids, dept and shot-type keys, overhead keys - is now normative (section 3) and verifier-enforced. |
+
+The full v0.1 -> v0.2 changelog lives in CHANGELOG.md.
 
 ## 9. Open questions for the group
 
@@ -442,7 +523,9 @@ second. Precedent for the open-format/closed-tooling split: PDF, USD.)
 
 ---
 Files in this folder: `SPEC.md` (this document), `bidio.schema.json`
-(machine validation), `fixtures/` (four conformance fixtures covering
-all four profiles, totals hand-verified), `tools/verify.py` (reference
-verifier: schema + profile + referential integrity + totals +
-extensions).
+(machine validation), `CHANGELOG.md` (version history), `LICENSE`
+(CC BY 4.0 spec text, MIT machine artifacts), `fixtures/` (six
+conformance fixtures covering all four profiles plus the v0.3
+discount/overhead/labour_share worked example, totals hand-verified),
+`tools/verify.py` (reference verifier: schema + profile + referential
+integrity + totals + extensions).

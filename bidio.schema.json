@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://bidio.dev/schema/0.2/bidio.schema.json",
-  "title": "bidIO bid document, v0.2 (draft)",
+  "$id": "https://bidio.dev/schema/0.3/bidio.schema.json",
+  "title": "bidIO bid document, v0.3 (draft)",
   "type": "object",
   "additionalProperties": false,
   "required": ["bidio", "id", "conformance", "project", "currency", "shots", "totals"],
   "properties": {
-    "bidio": { "type": "string", "pattern": "^0\\.2(\\.\\d+)?$" },
+    "bidio": { "type": "string", "pattern": "^0\\.3(\\.\\d+)?$" },
     "id": { "type": "string", "format": "uuid" },
     "bid_id": { "type": "string", "format": "uuid" },
     "conformance": { "enum": ["M1", "M1-Multisite", "M1-Series", "M1-Full"] },
@@ -109,6 +109,20 @@
       }
     },
     "rate_card": { "$ref": "#/$defs/rateCard" },
+    "overheads": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "rate"],
+        "properties": {
+          "key": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
+          "label": { "type": "string" },
+          "rate": { "type": "number", "minimum": 0, "maximum": 1 },
+          "extensions": { "$ref": "#/$defs/extensions" }
+        }
+      }
+    },
     "shots": {
       "type": "array",
       "items": { "$ref": "#/$defs/shot" }
@@ -142,6 +156,8 @@
       "properties": {
         "shots_subtotal": { "type": "number" },
         "line_items_subtotal": { "type": "number" },
+        "discount_total": { "type": "number" },
+        "overhead_total": { "type": "number" },
         "gross": { "type": "number" },
         "incentive_credit": { "type": "number" },
         "net": { "type": "number" },
@@ -258,6 +274,8 @@
           }
         },
         "unit_price": { "type": ["number", "null"], "minimum": 0 },
+        "discount": { "type": "number", "minimum": 0, "maximum": 1 },
+        "labour_share": { "type": "number", "minimum": 0, "maximum": 1 },
         "notes": { "type": "string" },
         "extensions": { "$ref": "#/$defs/extensions" }
       }
@@ -273,6 +291,8 @@
         "quantity": { "type": "number", "minimum": 0 },
         "unit": { "type": "string" },
         "unit_cost": { "type": "number", "minimum": 0 },
+        "discount": { "type": "number", "minimum": 0, "maximum": 1 },
+        "labour_share": { "type": "number", "minimum": 0, "maximum": 1 },
         "execution_site": { "$ref": "#/$defs/siteKey" },
         "episode": { "$ref": "#/$defs/episodeCode" },
         "extensions": { "$ref": "#/$defs/extensions" }

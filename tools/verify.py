@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""bidIO v0.2 reference verifier.
+"""bidIO v0.3 reference verifier.
 
 Usage:  python3 verify.py <file.bid.json> [more files...]
 
@@ -9,8 +9,9 @@ Checks the five conformance conditions from SPEC.md section 3:
   2. profile coverage         (declared `conformance` covers features used)
   3. referential integrity    (handle uniqueness, site/episode keys,
                                incentive scoping, variant -> bid_id)
-  4. totals recomputation     (pure stdlib - the normative item-level math,
-                               including by_site / by_episode blocks)
+  4. totals recomputation     (pure stdlib - the normative item-level math
+                               incl. discounts, overheads, per-item
+                               labour_share, by_site / by_episode blocks)
   5. extensions hygiene       (unknown namespaces are fine; non-namespaced
                                extension keys are flagged)
 
@@ -104,6 +105,8 @@ def _check_unique(values, what, problems):
 
 
 def check_integrity(doc, problems):
+    _check_unique([o["key"] for o in doc.get("overheads", [])],
+                  "overhead key", problems)
     _check_unique([s["key"] for s in doc.get("sites", [])],
                   "site key", problems)
     _check_unique([e["code"] for e in doc.get("episodes", [])],
@@ -172,9 +175,13 @@ def check_integrity(doc, problems):
 
 
 def item_costs(doc, problems):
-    """Compute every item's (cost, credit_rate, site, episode, is_shot).
+    """Compute every entry's (cost, credit_rate, site, episode, kind,
+    discount_amount) where kind is 'shot' | 'line' | 'overhead'.
 
-    This is the normative item-level math from SPEC section 3.
+    This is the normative item-level math from SPEC section 3:
+    discounts apply per item, overheads are document-level percentage
+    lines on the post-discount item base (site-neutral, untagged), and
+    a per-item labour_share overrides the incentive's default share.
     """
     doc_card = {k: d(v) for k, v in (doc.get("rate_card") or {}).items()}
     site_cards = {
@@ -183,14 +190,15 @@ def item_costs(doc, problems):
     has_sites = bool(doc.get("sites"))
     incentives = doc.get("incentives", [])
 
-    def incentive_rate(site):
+    def incentive_rate(site, ls_override=None):
         rate = Decimal(0)
         for inc in incentives:
             scope = inc.get("sites")
             applies = (not has_sites and not scope) or \
                       (site is not None and scope and site in scope)
             if applies:
-                ls = d(inc["labour_share"])
+                ls = d(ls_override) if ls_override is not None \
+                    else d(inc["labour_share"])
                 rate += ls * d(inc["labour_rate"])
                 rate += (1 - ls) * d(inc["nonlabour_rate"])
         return rate
@@ -200,10 +208,10 @@ def item_costs(doc, problems):
         qty = d(shot.get("quantity", 1))
         site = shot.get("execution_site")
         if shot.get("unit_price") is not None:
-            cost = qty * d(shot["unit_price"])
+            base = qty * d(shot["unit_price"])
         else:
             card = site_cards.get(site, doc_card) if site else doc_card
-            cost = Decimal(0)
+            base = Decimal(0)
             for dept, days in (shot.get("efforts") or {}).items():
                 if dept not in card:
                     problems.append(
@@ -212,31 +220,56 @@ def item_costs(doc, problems):
                         "from the resolved rate card "
                         f"({'site ' + site if site and site in site_cards else 'document'})")
                     continue
-                cost += d(days) * card[dept]
-            cost *= qty
-        items.append((cost, incentive_rate(site), site,
-                      shot.get("episode"), True))
+                base += d(days) * card[dept]
+            base *= qty
+        disc = d(shot.get("discount", 0))
+        cost = base * (1 - disc)
+        items.append((cost, incentive_rate(site, shot.get("labour_share")),
+                      site, shot.get("episode"), "shot", base - cost))
 
     for li in doc.get("line_items", []):
-        cost = d(li["quantity"]) * d(li["unit_cost"])
+        base = d(li["quantity"]) * d(li["unit_cost"])
+        disc = d(li.get("discount", 0))
+        cost = base * (1 - disc)
         site = li.get("execution_site")
-        items.append((cost, incentive_rate(site), site,
-                      li.get("episode"), False))
+        items.append((cost, incentive_rate(site, li.get("labour_share")),
+                      site, li.get("episode"), "line", base - cost))
+
+    # Overheads: document-level percentage lines on the post-discount
+    # item base. Site-neutral and episode-untagged by definition, so in
+    # a multi-site file no site-scoped incentive touches them (rate 0 by
+    # the same rule that governs site-neutral items), and they appear in
+    # document totals only, never in a partition block.
+    item_base = sum((c for c, _, _, _, _, _ in items), Decimal(0))
+    for oh in doc.get("overheads", []):
+        amount = d(oh["rate"]) * item_base
+        items.append((amount, incentive_rate(None), None, None,
+                      "overhead", Decimal(0)))
     return items
 
 
 def rollup(items):
-    shots = sum((c for c, _, _, _, is_shot in items if is_shot), Decimal(0))
-    lines = sum((c for c, _, _, _, is_shot in items if not is_shot), Decimal(0))
-    gross = shots + lines
-    credit = sum((c * r for c, r, _, _, _ in items), Decimal(0))
-    return {
+    shots = sum((c for c, _, _, _, kind, _ in items if kind == "shot"),
+                Decimal(0))
+    lines = sum((c for c, _, _, _, kind, _ in items if kind == "line"),
+                Decimal(0))
+    overhead = sum((c for c, _, _, _, kind, _ in items if kind == "overhead"),
+                   Decimal(0))
+    discount = sum((dd for _, _, _, _, _, dd in items), Decimal(0))
+    gross = shots + lines + overhead
+    credit = sum((c * r for c, r, _, _, _, _ in items), Decimal(0))
+    out = {
         "shots_subtotal": shots,
         "line_items_subtotal": lines,
         "gross": gross,
         "incentive_credit": credit,
         "net": gross - credit,
     }
+    if overhead:
+        out["overhead_total"] = overhead
+    if discount:
+        out["discount_total"] = discount
+    return out
 
 
 def compare_block(declared, computed, ctx, problems):
@@ -315,9 +348,9 @@ def verify(path):
         print(f"  [fail] cannot read/parse: {e}")
         return False
     version = str(doc.get("bidio", ""))
-    if not (version == "0.2" or version.startswith("0.2.")):
+    if not (version == "0.3" or version.startswith("0.3.")):
         print(f"  [fail] version: file declares bidio '{version}' - this is a "
-              "0.2 verifier and 0.x readers match major.minor exactly")
+              "0.3 verifier and 0.x readers match major.minor exactly")
         return False
     problems = []
     check_schema(doc, problems)
@@ -329,7 +362,7 @@ def verify(path):
         for p in problems:
             print(f"  [fail] {p}")
         return False
-    print(f"  CONFORMANT (bidIO v0.2, profile {doc.get('conformance')})")
+    print(f"  CONFORMANT (bidIO v0.3, profile {doc.get('conformance')})")
     return True
 
 
