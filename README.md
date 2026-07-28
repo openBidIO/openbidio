@@ -61,15 +61,6 @@ fixtures, is compatible. No one ever needs to read anyone's source code.
    verifier-enforced (a duplicated site key used to silently re-price a
    document), and the package ships a LICENSE.
 
-## Reference implementation
-
-Tally (Entropy's bidding engine) reads and writes this format natively:
-export produces a self-verified conformant document per bid revision,
-import verifies-then-materializes with a preview step. The round-trip
-(export -> independent reimport -> re-export) reproduces totals to the
-cent - the "same file, two engines, identical totals" proof the M1
-milestone asks every engine to pass.
-
 ## Governance
 
 OpenBidIO is developed by an open working group (Narro, Entropy, Nano
