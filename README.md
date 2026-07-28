@@ -1,5 +1,7 @@
 # OpenBidIO v0.3 - draft bid document format (formerly bidIO)
 
+Canonical home: https://github.com/openBidIO/openbidio - rendered spec: https://openbidio.github.io/openbidio/
+
 Third draft of the shared bid format. v0.2 integrated the group's
 structural feedback (sites, scenarios, episodes, profiles); v0.3
 promotes the three things real bids kept needing into core: **per-item
