@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""bidIO v0.3 reference verifier.
+"""OpenBidIO v0.3 reference verifier.
 
 Usage:  python3 verify.py <file.bid.json> [more files...]
 
@@ -25,7 +25,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 
 TOLERANCE = Decimal("0.005")
-SCHEMA_PATH = Path(__file__).resolve().parent.parent / "bidio.schema.json"
+SCHEMA_PATH = Path(__file__).resolve().parent.parent / "openbidio.schema.json"
 PROFILES = ("M1", "M1-Multisite", "M1-Series", "M1-Full")
 
 
@@ -362,7 +362,7 @@ def verify(path):
         for p in problems:
             print(f"  [fail] {p}")
         return False
-    print(f"  CONFORMANT (bidIO v0.3, profile {doc.get('conformance')})")
+    print(f"  CONFORMANT (OpenBidIO v0.3, profile {doc.get('conformance')})")
     return True
 
 

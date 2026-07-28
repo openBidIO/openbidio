@@ -1,4 +1,4 @@
-# bidIO v0.3 - draft bid document format
+# OpenBidIO v0.3 - draft bid document format (formerly bidIO)
 
 Third draft of the shared bid format. v0.2 integrated the group's
 structural feedback (sites, scenarios, episodes, profiles); v0.3
@@ -13,7 +13,7 @@ against v0.2, and CHANGELOG.md carries the full version history.
 | File | What it is |
 |---|---|
 | `SPEC.md` | The human spec: every field, the normative item-level math, conformance profiles, the extension federation path, governance, changelog, open questions |
-| `bidio.schema.json` | Machine validation (JSON Schema 2020-12) - strict on core fields, open at `extensions` |
+| `openbidio.schema.json` | Machine validation (JSON Schema 2020-12) - strict on core fields, open at `extensions` |
 | `CHANGELOG.md` | Version history: 0.1 -> 0.2 -> 0.2.1 fixes -> 0.3, with the why behind each change |
 | `LICENSE` | CC BY 4.0 for the spec text, MIT for schema/tools/fixtures - open format, closed tooling |
 | `fixtures/fixture-001.bid.json` | Single-site feature bid (`M1`) - carried forward since v0.1 |
@@ -70,7 +70,7 @@ milestone asks every engine to pass.
 
 ## Governance
 
-bidIO is developed by an open working group (Narro, Entropy, Nano
+OpenBidIO is developed by an open working group (Narro, Entropy, Nano
 Visuals, and independent contributors). Intended v1.0 path: publication
 under the Visual Effects Society (Technology Committee), SMPTE
 standardization track afterwards, PGA endorsement for the producer-side

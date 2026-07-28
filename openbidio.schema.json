@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://bidio.dev/schema/0.3/bidio.schema.json",
-  "title": "bidIO bid document, v0.3 (draft)",
+  "$id": "https://openbidio.dev/schema/0.3/openbidio.schema.json",
+  "title": "OpenBidIO bid document, v0.3 (draft)",
   "type": "object",
   "additionalProperties": false,
   "required": ["bidio", "id", "conformance", "project", "currency", "shots", "totals"],

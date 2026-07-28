@@ -1,7 +1,19 @@
-# bidIO changelog
+# OpenBidIO changelog
 
-All notable changes to the bidIO format, schema, verifier, and fixtures.
+All notable changes to the OpenBidIO (formerly bidIO) format, schema, verifier, and fixtures.
 Pre-1.0 rule: readers match major.minor exactly; minors MAY break.
+
+## Unreleased
+
+- **Renamed: bidIO -> OpenBidIO.** Publishing under the Open* convention of
+  the VFX standards the format aims to sit beside (OpenEXR, OpenColorIO,
+  OpenTimelineIO). Schema moves to `openbidio.schema.json` with `$id`
+  namespace `https://openbidio.dev/...`; the v0.1-v0.3 tags keep their
+  original bidIO identity as honest history. Known neighbor: OpenBID, a
+  commercial VFX bidding tool - the name is retained knowingly; a future
+  ratification body is free to rename. Scope note: the format is written
+  for VFX bids today but is intended to grow into a post-production-wide
+  bidding standard.
 
 ## 0.3 - 2026-07-23 (draft)
 

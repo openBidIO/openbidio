@@ -1,4 +1,4 @@
-# bidIO v0.3 - the bid document format (DRAFT for the group)
+# OpenBidIO v0.3 - the bid document format (DRAFT for the group)
 
 Status: **draft 0.3, for discussion.** Supersedes draft 0.2 (2026-07-11).
 This revision promotes three things real bids kept needing into core:
@@ -9,12 +9,12 @@ both of which lose information a second tool needs. Section 8 lists
 exactly what changed and why; section 9 lists the open questions.
 CHANGELOG.md carries the full version history.
 
-**Convention: every rate, share, and discount in bidIO is a 0..1
+**Convention: every rate, share, and discount in OpenBidIO is a 0..1
 decimal** (0.10 = 10%). No field anywhere in the format uses 0..100.
 
 ## 1. What this is (and is not)
 
-A bidIO document is a single JSON file that fully describes one bid:
+A OpenBidIO document is a single JSON file that fully describes one bid:
 shots, efforts, rates, sites, incentives, totals, and award state.
 
 - **A format, not a template.** The web tool, a spreadsheet, or any
@@ -37,7 +37,7 @@ shots, efforts, rates, sites, incentives, totals, and award state.
 
 ### Versioning rule (0.x)
 
-While bidIO is pre-1.0, **readers MUST match major.minor exactly**
+While OpenBidIO is pre-1.0, **readers MUST match major.minor exactly**
 (a 0.2 reader rejects a 0.3 file, cleanly, with a version message).
 Minor versions MAY break during 0.x - that is what 0.x is for. The 1.0
 release will define the long-term compatibility and deprecation policy
@@ -317,7 +317,7 @@ vendor-private by design.
 
 The client breakdown that seeded the bid, the storyboard PDF, the
 published rate card - linked by URI, pinned by optional SHA-256, never
-embedded. bidIO files stay small, human-readable, and diffable.
+embedded. OpenBidIO files stay small, human-readable, and diffable.
 `kind` recommended vocabulary: `client_breakdown | storyboard | script |
 rate_card | contract | other`. (This resolves v0.1 open question #6:
 `client_bid_ref` generalized.)
@@ -414,7 +414,7 @@ This item-level formulation is what makes every partition deterministic.
    rule 8 binds at full precision only.
 
 A file is **conformant** when it (a) validates against
-`bidio.schema.json`, (b) declares a profile that covers the features it
+`openbidio.schema.json`, (b) declares a profile that covers the features it
 uses (section 5), (c) passes referential integrity (every
 `execution_site`, `episode`, incentive `sites` entry, `by_site` key and
 `by_episode` key refers to a declared site/episode; `variant` implies
@@ -485,7 +485,7 @@ resourcing graduates to an optional schema by the path above.
 
 ## 7. Governance
 
-bidIO is developed by an open working group (Narro, Entropy, Nano
+OpenBidIO is developed by an open working group (Narro, Entropy, Nano
 Visuals, and independent contributors). The intended path for v1.0:
 publication under the **Visual Effects Society** (Technology Committee),
 with a subsequent **SMPTE** standardization track for formal industry
@@ -522,7 +522,7 @@ The full v0.1 -> v0.2 changelog lives in CHANGELOG.md.
 8. Profile names - happy with `M1 / M1-Multisite / M1-Series / M1-Full`?
 
 ---
-Files in this folder: `SPEC.md` (this document), `bidio.schema.json`
+Files in this folder: `SPEC.md` (this document), `openbidio.schema.json`
 (machine validation), `CHANGELOG.md` (version history), `LICENSE`
 (CC BY 4.0 spec text, MIT machine artifacts), `fixtures/` (six
 conformance fixtures covering all four profiles plus the v0.3
