@@ -1,16 +1,29 @@
-# OpenBidIO v0.3 - the bid document format (DRAFT for the group)
+# OpenBidIO v0.4 - the bid document format (DRAFT for the group)
 
-Status: **draft 0.3, for discussion.** Supersedes draft 0.2 (2026-07-11).
-This revision promotes three things real bids kept needing into core:
-per-item **discounts**, document-level **overhead lines**, and per-item
-**labour_share** for incentive fidelity. All were previously only
-expressible by baking numbers into prices or hiding them in extensions -
-both of which lose information a second tool needs. Section 8 lists
-exactly what changed and why; section 9 lists the open questions.
-CHANGELOG.md carries the full version history.
+Status: **draft 0.4, for discussion.** Supersedes draft 0.3 (2026-07-23).
+This revision says **who does the work**: a bid larger than one shop has
+a prime and its subcontractors, and 0.3 could only name one vendor, so a
+prime's file either lied about who does what or hid it in extensions.
+0.4 makes vendors, their share of the money (`totals.by_vendor`) and
+their own bids (`subbids`, nested whole) first-class. It also closes four
+things the 0.3 review measured as missing: money written as binary
+floats, a document with no seal, an incentive with no cap, and a verifier
+that certified without its schema. Section 8 lists exactly what changed
+and why; section 9 lists the open questions. CHANGELOG.md carries the
+full version history.
 
 **Convention: every rate, share, and discount in OpenBidIO is a 0..1
 decimal** (0.10 = 10%). No field anywhere in the format uses 0..100.
+
+**Convention (NEW in 0.4): every amount of money is a decimal STRING**
+(`"800"`, `"8623.5"`, `"0.25"` is a rate and stays a number). A JSON
+number is a binary float in most readers, and `0.1 + 0.2` is the bug a
+bid format exists to prevent. Rate cards, `unit_price`, `unit_cost`,
+incentive `cap` and every field of `totals` are money; quantities, days,
+rates, shares, discounts and `fx_rates.rate` are not.
+
+**A document is a `.bidio` file** (media type `application/vnd.bidio+json`),
+JSON inside. Section 2.11.
 
 ## 1. What this is (and is not)
 
@@ -47,19 +60,23 @@ as a group decision.
 
 ```json
 {
-  "bidio": "0.3",
+  "bidio": "0.4",
   "id": "b7d9c2e4-1f3a-4c8b-9e2d-5a6f7c8d9e0f",
   "bid_id": "0f4e2d9a-8c1b-4a7e-b3d5-6c9f8e7a2b1c",
   "conformance": "M1",
   "generator": { "name": "tally", "version": "..." },
-  "created_at": "2026-07-11T18:00:00Z",
-  "updated_at": "2026-07-11T18:00:00Z",
+  "created_at": "2026-09-25T18:00:00Z",
+  "updated_at": "2026-09-25T18:00:00Z",
+  "provenance": { ... see 2.11 ... },
+  "digest":    { "algorithm": "sha256", "value": "...64 hex..." },
 
   "project":   { "title": "...", "code": "...", "client": "...", "kind": "feature" },
-  "parties":   { "vendor": { "name": "..." } },
+  "parties":   { "vendor": { "name": "..." },
+                 "vendors": [ ... see 2.10 ... ],
+                 "client": { "name": "..." } },
 
   "currency":  "CAD",
-  "fx_rates":  [],
+  "fx_rates":  [ { "currency": "GBP", "rate": 1.72 } ],
 
   "sites":     [ ... see 2.2 ... ],
   "episodes":  [ ... see 2.3 ... ],
@@ -67,12 +84,13 @@ as a group decision.
   "departments": [ { "key": "comp", "label": "Compositing" } ],
   "shot_types":  [ { "key": "environment", "label": "Environment" } ],
 
-  "rate_card": { "comp": 800, "fx": 950 },
+  "rate_card": { "comp": "800", "fx": "950" },
   "overheads":  [ ... see 2.9 ... ],
 
   "shots":      [ ... see 2.4 ... ],
   "line_items": [ ... see 2.5 ... ],
   "incentives": [ ... see 2.6 ... ],
+  "subbids":    [ ... see 2.10 ... ],
   "references": [ ... see 2.8 ... ],
   "totals":     { ... see 2.7 ... },
 
@@ -84,29 +102,32 @@ as a group decision.
 ```
 
 Required in every document: `bidio`, `id`, `conformance`, `project`,
-`currency`, `shots`, `totals`. Everything else is optional (with one
-conditional: `revision.variant` requires `bid_id`).
+`currency`, `shots`, `totals`, `digest`. Everything else is optional
+(with one conditional: `revision.variant` requires `bid_id`).
 
 | Field | Meaning |
 |---|---|
 | `bidio` | Format version this file conforms to. 0.x rule: readers match major.minor exactly (section 1). |
 | `id` | UUID identifying THIS document. Every revision and every scenario is a distinct document with a distinct `id`. |
 | `bid_id` | UUID identifying THE BID - stable across all revisions and all scenarios of one bid. RECOMMENDED on every document; REQUIRED when `revision.variant` is used. See 2.1. |
-| `conformance` | Which profile this file uses: `M1`, `M1-Multisite`, `M1-Series`, `M1-Full`. Declared profile MUST cover the features actually used (section 5). |
-| `generator` | Which tool wrote the file (provenance, optional). |
+| `conformance` | Which profile this file uses: `M1`, `M1-Multisite`, `M1-Series`, `M1-Vendors`, `M1-Full`. Declared profile MUST cover the features actually used (section 5). |
+| `generator` | Which tool wrote the file (optional). |
+| `provenance` | Where the document came from: `generated_at`, `generated_by`, `source {system, ref, uri}` (optional). See 2.11. |
+| `digest` | REQUIRED. `{algorithm: "sha256", value}` over the canonical form of the document without this member. A document edited after it was written fails its own seal. See 2.11. |
 | `project` | `title` required; `code`, `client` optional; `kind` optional advisory metadata (recommended vocabulary: `feature`, `series`, `commercial`, `short`, `other`). Nothing normative reads `kind`. |
-| `parties` | Who is bidding (`vendor.name` recommended) and optionally for whom. No contact info is core. |
-| `currency` | ISO 4217 code. All monetary values in the document, including per-site rate cards, are in this one currency. |
-| `fx_rates` | RESERVED for M2. Frozen conversion rates. Multi-site does NOT require multi-currency: a vendor freezes converted rates into the site rate cards. |
+| `parties` | Who is bidding and for whom. `vendor` is the 0.3 party and IS the prime; `vendors[]` declares every vendor doing work - the prime and its subs - by handle (2.10). No contact info is core. |
+| `currency` | ISO 4217 code. Every amount in the document is in this currency, EXCEPT a site that declares its own `currency` (2.2): that site's rate card and the amounts of items tagged to it are in the site's currency and convert through `fx_rates`. Vendor cards are always in the document currency. |
+| `fx_rates` | Frozen conversion rates, one per foreign currency: `rate` is document-currency units per ONE unit of that currency (1 GBP = 1.72 CAD). Required for every site currency that differs from the document's. A file with no site currencies needs none (a vendor may still freeze converted rates into a card, as before). |
 | `sites` | Execution sites (pricing contexts). See 2.2. |
 | `episodes` | Declared episodes for series bids. See 2.3. |
 | `departments` | Optional declarations of department keys used in `efforts` and rate cards. Open vocabulary; recommended canonical keys: `comp, roto, paint, matchmove, anim, fx, lighting, lookdev, model, texture, groom, cloth, crowd, dmp, edit`. |
 | `shot_types` | Optional declaration of the shot-type taxonomy used by `shots[].type`. |
-| `rate_card` | Document-level day rates per department, in `currency`. The DEFAULT card - see rate resolution in 2.2. |
+| `rate_card` | Document-level day rates per department, money strings in `currency`. The LAST card in rate resolution (vendor -> site -> document) - see 2.2. |
 | `overheads` | Document-level percentage lines (production overhead, contingency) computed on the post-discount item base. See 2.9. |
 | `references` | Links to external documents by URI + hash. See 2.8. Nothing is ever embedded. |
 | `revision` | `number` (1..n), `variant` (scenario name, see 2.1), `locked` (a sent bid is locked = byte-frozen by convention), `supersedes` (document `id` of the prior revision). |
-| `award` | Lifecycle: `draft`, `submitted`, `awarded`, `declined`, `withdrawn` (+ optional timestamps, `client_reference`). Multi-vendor award ALLOCATION remains M2 - reserved, not specified here. |
+| `subbids` | A sub vendor's own OpenBidIO document, nested whole with its identity and digest. See 2.10. |
+| `award` | Lifecycle: `draft`, `submitted`, `awarded`, `declined`, `withdrawn` (+ optional timestamps, `client_reference`). Who does which item is the `vendor` tag (2.10); a per-vendor award STATUS remains M2 - reserved, not specified here. |
 | `extensions` | Namespaced company blocks, e.g. `"com.narro": {...}`, `"com.entropy": {...}`. Readers MUST ignore namespaces they don't know. Allowed at document, shot, line-item, and incentive level. |
 
 ### 2.1 Identity: one bid, many documents
@@ -140,19 +161,30 @@ first-class declaration:
 ```json
 "sites": [
   { "key": "mtl", "label": "Montreal", "jurisdiction": "CA-QC",
-    "rate_card": { "comp": 800, "fx": 950 } },
-  { "key": "lon", "label": "London", "jurisdiction": "GB-ENG",
-    "rate_card": { "comp": 1000, "anim": 1100 } }
+    "rate_card": { "comp": "800", "fx": "950" } },
+  { "key": "lon", "label": "London", "jurisdiction": "GB-ENG", "currency": "GBP",
+    "rate_card": { "comp": "1000", "anim": "1100" } }
 ]
 ```
 
 - `key` is the handle shots and incentives reference. `jurisdiction`
-  is required - a site exists precisely because location matters.
-- `rate_card` per site is optional. **Rate resolution rule:** a shot
-  with `execution_site` prices from that site's `rate_card` if the site
-  declares one, else from the document-level `rate_card`. No
-  per-department merging between cards - the card that resolves must
-  contain every department the shot's `efforts` reference.
+  is required - a site exists precisely because location matters - and
+  since 0.4 it is **ISO 3166**: the alpha-2 country, optionally with its
+  3166-2 subdivision (`CA-QC`, `GB-ENG`, `US-NY`, `NZ`). The schema
+  refuses "Quebec". (Resolves 0.3 open question 3.)
+- `currency` (NEW in 0.4, ISO 4217, optional): the site prices in its
+  own currency. Its `rate_card` and the `unit_price` / `unit_cost` of
+  items tagged to it are in that currency and convert to the document
+  currency through the matching `fx_rates` entry (rule 1b in section 3).
+  A site currency with no rate is an integrity failure. A site without
+  `currency` prices in the document currency, as in 0.3.
+- `rate_card` per site is optional. **Rate resolution rule (0.4):** an
+  efforts-priced shot prices from its VENDOR's `rate_card` when the item's
+  vendor declares one (2.10); else from its site's `rate_card` when
+  `execution_site` is set and that site declares one; else from the
+  document-level `rate_card`. No per-department merging between cards -
+  the card that resolves must contain every department the shot's
+  `efforts` reference.
 - Shots and line items carry an optional `execution_site` (a declared
   site key). An item with no `execution_site` in a multi-site file is
   **site-neutral**: it prices from the document rate card and is
@@ -198,6 +230,7 @@ Series bids declare their episodes and tag items to them:
   "quantity": 1,
   "execution_site": "mtl",
   "episode": "ep101",
+  "vendor": "prime",
   "frames": { "count": 240 },
   "efforts": { "model": 10, "texture": 8, "anim": 15, "lighting": 12, "comp": 10 },
   "unit_price": null,
@@ -217,8 +250,11 @@ Series bids declare their episodes and tag items to them:
   multiplies by it.
 - `efforts`: person-DAYS per department key. Decimals allowed
   (recommend quarter-day increments).
-- `unit_price`: optional override - if present, the shot prices as
-  `quantity x unit_price` and `efforts` become informational.
+- `unit_price`: optional override (a money string) - if present, the
+  shot prices as `quantity x unit_price` and `efforts` become
+  informational. This is how a prime carries a sub's flat price (2.10).
+- `vendor` (NEW in 0.4): which declared vendor does this shot (2.10). An
+  untagged shot belongs to the prime.
 - `discount` (0..1, NEW in 0.3): applied to the item's base cost -
   `cost = base x (1 - discount)`. See 2.9.
 - `labour_share` (0..1, NEW in 0.3): the labour fraction of THIS item's
@@ -231,22 +267,38 @@ Series bids declare their episodes and tag items to them:
 
 ```json
 { "id": "li-1", "label": "VFX supervision", "kind": "supervision",
-  "quantity": 10, "unit": "day", "unit_cost": 1200,
-  "execution_site": "mtl", "episode": null, "extensions": {} }
+  "quantity": 10, "unit": "day", "unit_cost": "1200",
+  "execution_site": "mtl", "episode": null, "vendor": "prime", "extensions": {} }
 ```
 
 `kind` recommended vocabulary: `supervision | onset | editorial |
-management | data | other`. Line items take the same optional
-`execution_site` and `episode` tags as shots, with the same semantics -
-and the same optional `discount` and `labour_share` fields (2.4, 2.9).
+management | data | other`. `unit_cost` is a money string. Line items
+take the same optional `execution_site`, `episode` and `vendor` tags as
+shots, with the same semantics - and the same optional `discount` and
+`labour_share` fields (2.4, 2.9).
 
 ### 2.6 Incentives (v0.2 model)
 
 ```json
 { "jurisdiction": "CA-QC", "program": "QPSTC",
   "sites": ["mtl"],
-  "labour_share": 0.65, "labour_rate": 0.25, "nonlabour_rate": 0.20 }
+  "labour_share": 0.65, "labour_rate": 0.25, "nonlabour_rate": 0.20,
+  "basis": "cost", "cap": "250000" }
 ```
+
+- `jurisdiction` is ISO 3166 (2.2). `basis` and `cap` are NEW in 0.4:
+  - `basis` (`cost`, the default, or `labour`): with `cost` the entry's
+    rate is `ls x labour_rate + (1 - ls) x nonlabour_rate` as in 0.3;
+    with `labour` the non-labour term is dropped and the credit is
+    `ls x cost x labour_rate` - a program that pays on qualifying labour
+    only says so instead of pretending its non-labour rate is 0.
+  - `cap` (a money string): this incentive's credit over the WHOLE
+    document is at most `cap`. When the uncapped sum exceeds it, every
+    contribution of THIS incentive is scaled by the same factor
+    (rule 6b, section 3), so per-item credits and every partition block
+    still reconcile. Other incentives are untouched. A cap per site or
+    per vendor is expressed by scoping the incentive (its `sites`), not
+    by a second cap field.
 
 - `sites`: which declared site keys this incentive applies to.
   **In a file that declares `sites`, every incentive MUST carry a
@@ -272,16 +324,24 @@ and the same optional `discount` and `labour_share` fields (2.4, 2.9).
 
 ```json
 {
-  "shots_subtotal": 32250, "line_items_subtotal": 9200,
-  "gross": 41450, "incentive_credit": 8623.50, "net": 32826.50,
+  "shots_subtotal": "32250", "line_items_subtotal": "9200",
+  "gross": "41450", "incentive_credit": "8623.50", "net": "32826.50",
   "by_site": {
-    "mtl": { "shots_subtotal": 14850, "line_items_subtotal": 6000,
-             "gross": 20850, "incentive_credit": 4795.50, "net": 16054.50 },
-    "lon": { "shots_subtotal": 17400, "line_items_subtotal": 0,
-             "gross": 17400, "incentive_credit": 3828, "net": 13572 }
+    "mtl": { "shots_subtotal": "14850", "line_items_subtotal": "6000",
+             "gross": "20850", "incentive_credit": "4795.50", "net": "16054.50" },
+    "lon": { "shots_subtotal": "17400", "line_items_subtotal": "0",
+             "gross": "17400", "incentive_credit": "3828", "net": "13572" }
+  },
+  "by_vendor": {
+    "prime":      { "shots_subtotal": "27250", "line_items_subtotal": "9200",
+                    "gross": "36450", "incentive_credit": "7583.50", "net": "28866.50" },
+    "roto-house": { "shots_subtotal": "5000", "line_items_subtotal": "0",
+                    "gross": "5000", "incentive_credit": "1040", "net": "3960" }
   }
 }
 ```
+
+Every field is a money string (2 decimals when reported, rule 9).
 
 Writers MUST populate `totals`. Readers MUST be able to recompute them
 from the document and match (section 3). That redundancy is deliberate -
@@ -294,6 +354,11 @@ file without implementing the math.
 - `by_episode`: RECOMMENDED in `M1-Series`/`M1-Full` files. Keys are
   declared episode codes. Untagged (overhead) items belong to no
   episode block.
+- `by_vendor` (NEW in 0.4): RECOMMENDED in `M1-Vendors`/`M1-Full`
+  files. Keys are declared vendor keys; every item belongs to exactly
+  one vendor (untagged = the prime), so the blocks sum to the item base
+  and overheads belong to no vendor block. Same reconciliation invariant
+  as the other two partitions (rule 8).
 
 - `discount_total` (optional, NEW in 0.3): sum of per-item discount
   amounts (base minus discounted cost). Declare it when any item
@@ -363,6 +428,89 @@ carries the total amount conceded.
 - `key` is a unique handle (verifier-enforced); the recommended
   vocabulary is `production | buffer | other`.
 
+### 2.10 Vendors and sub-bids (NEW in 0.4)
+
+A bid larger than one shop has a **prime** (the party the client
+contracts) and **subs** (the shops the prime contracts). 0.3 named one
+vendor; 0.4 names them all and says which item is whose.
+
+```json
+"parties": {
+  "vendor":  { "name": "Example VFX Co", "country": "CA" },
+  "vendors": [
+    { "key": "prime",      "name": "Example VFX Co", "role": "prime", "country": "CA" },
+    { "key": "roto-house", "name": "Roto House",     "role": "sub",   "country": "IN",
+      "rate_card": { "roto": "300", "paint": "350" } }
+  ]
+},
+"shots": [
+  { "id": "sh-030", "code": "030", "quantity": 1, "unit_price": "4200", "vendor": "roto-house" }
+],
+"subbids": [
+  { "vendor": "roto-house",
+    "bid_id": "0a9b8c7d-6e5f-4a4b-8c3d-2e1f0a9b8c7d",
+    "revision": { "number": 1 },
+    "digest": { "algorithm": "sha256", "value": "...the nested document's digest..." },
+    "document": { "bidio": "0.4", "id": "...", "conformance": "M1", ... } }
+]
+```
+
+- `vendors[]`: `key` (a handle, unique; `[a-z][a-z0-9_-]*`), `name`,
+  `role` (`prime` | `sub`), optional `country` and `rate_card` (in the
+  DOCUMENT currency). **Exactly one prime.** `parties.vendor` - the 0.3
+  party - stays and IS the prime: same name, verifier-enforced. A file
+  that declares only the prime uses no vendors feature and needs no
+  vendors profile; a second vendor, an item tag, a `by_vendor` block or
+  a sub-bid does.
+- `vendor` on a shot or line item: which declared vendor does it. An
+  untagged item is the prime's. A vendor's `rate_card` is the FIRST card
+  in rate resolution for its efforts-priced items (2.2); a sub whose
+  offer is a flat price per shot is carried as `unit_price`, which is
+  what most sub-bids are.
+- `totals.by_vendor`: the money by vendor (2.7).
+- `subbids[]`: the sub's OWN OpenBidIO document, nested whole, with the
+  three fields that identify it outside (`bid_id`, `revision`) and seal
+  it (`digest`, equal to the nested document's own). Every nested
+  document is a standalone, conformant 0.4 file: a reader that ignores
+  `subbids` loses nothing it needs to recompute the master; a reader
+  that opens one gets the sub's bid exactly as the sub sent it.
+  **The prime carries the sub's price**: the master's items tagged to
+  that vendor MUST price, before the master's own discounts, to the
+  sub-bid's `gross` (rule 10). A prime's markup is the prime's business
+  - a line item or an extension, never a silently repriced sub item.
+  A master may name a vendor with no sub-bid (the sub did not send a
+  file); it may not nest a sub-bid for the prime or for a vendor it
+  does not declare.
+
+Why nested and not linked: a `references` entry (2.8) links a document
+somebody else hosts; a sub-bid is EVIDENCE the prime's number rests on,
+and evidence travels with the claim. Why whole and not a delta: the same
+reason scenarios are whole documents (2.1) - a file a dumb tool cannot
+open by itself is a file that cannot be trusted by itself.
+
+### 2.11 Digest, provenance, file (NEW in 0.4)
+
+```json
+"provenance": { "generated_at": "2026-09-25T18:00:00Z", "generated_by": "tally 3.1",
+                "source": { "system": "tally", "ref": "MYH v2", "uri": "https://..." } },
+"digest":     { "algorithm": "sha256", "value": "6cb5bf65...64 hex..." }
+```
+
+- `digest` (REQUIRED): SHA-256 over the **canonical form** of the
+  document: the top-level object WITHOUT its `digest` member, serialized
+  as JSON with keys sorted, no whitespace (`,` and `:` separators),
+  UTF-8, non-ASCII characters unescaped. Any two writers produce the
+  same bytes for the same document, so the seal is portable. A document
+  whose recomputed digest differs from its declared one has been edited
+  after it was written - or written by hand - and is not conformant.
+  Locked revisions (2.1) are thereby verifiable, not merely conventional.
+- `provenance` (optional): when it was generated, by what (a person or a
+  tool, free text) and from what (`source.system`, `source.ref`,
+  `source.uri`). `generator` remains the tool's name and version.
+- **File**: extension `.bidio`, media type `application/vnd.bidio+json`.
+  The 0.3 `<CODE>_v<NN>.bid.json` spelling retires; a writer that keeps
+  the `<CODE>_v<NN>` stem names the file `<CODE>_v<NN>.bidio`.
+
 ## 3. Normative computation (what "conformant" means)
 
 The unit of computation is the **item** (a shot or a line item). All
@@ -370,13 +518,22 @@ rollups - document totals, per-site, per-episode - are sums over items.
 This item-level formulation is what makes every partition deterministic.
 
 1. **Rate resolution** (shots priced via efforts): the shot's card is
-   its site's `rate_card` if `execution_site` is set and that site
-   declares one; else the document `rate_card`. Every department in the
-   shot's `efforts` MUST exist in the resolved card.
+   its vendor's `rate_card` if the item's vendor (tagged, else the prime)
+   declares one; else its site's `rate_card` if `execution_site` is set
+   and that site declares one; else the document `rate_card`. Every
+   department in the shot's `efforts` MUST exist in the resolved card.
+   1b. **Currency.** When the resolved card is a site's and that site
+   declares a `currency` other than the document's, the card is in the
+   site currency; likewise the `unit_price` / `unit_cost` of any item
+   tagged to such a site. The item's base cost is multiplied by the
+   `fx_rates` rate for that currency (document units per one site
+   unit). Vendor cards and the document card are in the document
+   currency. A site currency with no rate is an integrity failure.
 2. **Item base cost.**
    Shot: `quantity x unit_price` if `unit_price` is set, else
-   `quantity x SUM over departments( efforts[dept] x resolved_rate[dept] )`.
-   Line item: `quantity x unit_cost`.
+   `quantity x SUM over departments( efforts[dept] x resolved_rate[dept] )`,
+   then x the currency factor of 1b.
+   Line item: `quantity x unit_cost` x the currency factor of 1b.
 3. **Item cost** = base cost x `(1 - discount)`, where `discount`
    defaults to 0. The item's discount amount is base minus cost.
 4. **Overhead lines** (document-level): each overhead's amount =
@@ -388,12 +545,21 @@ This item-level formulation is what makes every partition deterministic.
    the incentive has no `sites` list (single-site: applies to every
    entry); or the entry's `execution_site` is in the incentive's
    `sites` list. The entry's incentive rate is the sum over applying
-   incentives of `ls x labour_rate + (1 - ls) x nonlabour_rate`, where
-   `ls` is the ITEM's own `labour_share` if declared, else the
-   incentive's `labour_share`. Overhead amounts always use the
-   incentive's default share. Site-neutral entries in a multi-site
-   file (including all overheads) have rate 0.
-6. **Entry credit** = entry cost x entry incentive rate.
+   incentives of `ls x labour_rate + (1 - ls) x nonlabour_rate` when the
+   incentive's `basis` is `cost` (the default), or `ls x labour_rate`
+   when it is `labour`, where `ls` is the ITEM's own `labour_share` if
+   declared, else the incentive's `labour_share`. Overhead amounts
+   always use the incentive's default share. Site-neutral entries in a
+   multi-site file (including all overheads) have rate 0.
+6. **Entry credit** = entry cost x entry incentive rate - computed per
+   applying incentive, so each incentive's contribution to each entry is
+   known.
+   6b. **Caps.** For each incentive with a `cap`: sum its contributions
+   over every entry; if the sum exceeds `cap`, multiply every one of ITS
+   contributions by `cap / sum`. The entry credit is the sum of its
+   (scaled) contributions. Because the factor is uniform within the
+   incentive, `incentive_credit` in every partition block still equals
+   the sum over that block's entries.
 7. **Document totals**: `shots_subtotal` = sum of shot costs;
    `line_items_subtotal` = sum of line-item costs; `overhead_total` =
    sum of overhead amounts; `discount_total` = sum of item discount
@@ -402,29 +568,42 @@ This item-level formulation is what makes every partition deterministic.
    `net` = gross - incentive_credit.
 8. **Partition totals**: a `by_site` block sums exactly the items
    tagged to that site; a `by_episode` block sums exactly the items
-   tagged to that episode. Untagged items and ALL overhead amounts
-   appear only in document totals. Invariant (checked at full
-   precision): partition blocks plus untagged entries reconcile
-   exactly to document totals.
+   tagged to that episode; a `by_vendor` block sums exactly the items
+   whose vendor (tagged, else the prime) is that key. Untagged items and
+   ALL overhead amounts appear only in document totals. Invariant
+   (checked at full precision): partition blocks plus untagged entries
+   reconcile exactly to document totals.
 9. **Rounding**: compute at full precision; round each REPORTED field
-   to 2 decimals, half-up; verifiers compare with tolerance 0.005 per
-   field. Because each reported field rounds independently, the sum of
-   rounded partition blocks MAY differ from the rounded document total
-   by cents - that is arithmetic, not nonconformance. The invariant in
-   rule 8 binds at full precision only.
+   to 2 decimals, half-up, and write it as a money string; verifiers
+   compare with tolerance 0.005 per field. Because each reported field
+   rounds independently, the sum of rounded partition blocks MAY differ
+   from the rounded document total by cents - that is arithmetic, not
+   nonconformance. The invariant in rule 8 binds at full precision only.
+10. **Sub-bids**: for each `subbids` entry, the nested document is
+    verified as a document of its own (every rule here, recursively);
+    its `bid_id`, `revision` and `digest` equal the wrapper's; and the
+    sum of the BASE costs (rule 2, before rule 3's discounts) of the
+    master's items tagged to that vendor equals the nested document's
+    `totals.gross` within the rule-9 tolerance.
+11. **Digest**: the declared `digest.value` equals SHA-256 over the
+    canonical form defined in 2.11.
 
 A file is **conformant** when it (a) validates against
-`openbidio.schema.json`, (b) declares a profile that covers the features it
-uses (section 5), (c) passes referential integrity (every
-`execution_site`, `episode`, incentive `sites` entry, `by_site` key and
-`by_episode` key refers to a declared site/episode; `variant` implies
-`bid_id`; **every handle is unique within the document** - site keys,
-episode codes, shot ids, line-item ids, declared department and
-shot-type keys, `fx_rates` currencies. A duplicated handle is a
-silent-wrong-answer generator: two sites keyed `mtl` would let rate
-resolution and incentive scoping silently pick one of them), (d)
-recomputes to its own `totals`, and (e) is readable with all unknown
-`extensions` ignored. `tools/verify.py` checks all five.
+`openbidio.schema.json` - a verifier that cannot run the schema check
+does not certify, it says so, (b) declares a profile that covers the
+features it uses (section 5), (c) passes referential integrity (every
+`execution_site`, `episode`, `vendor`, incentive `sites` entry, `by_site`
+/ `by_episode` / `by_vendor` key refers to a declared site / episode /
+vendor; exactly one prime; every site currency has an `fx_rates` entry;
+`variant` implies `bid_id`; **every handle is unique within the
+document** - site keys, episode codes, vendor keys, shot ids, line-item
+ids, declared department and shot-type keys, `fx_rates` currencies. A
+duplicated handle is a silent-wrong-answer generator: two sites keyed
+`mtl` would let rate resolution and incentive scoping silently pick one
+of them), (d) recomputes to its own `totals`, (e) carries its own digest
+and every sub-bid it nests is conformant and priced as the master says
+(rules 10-11), and (f) is readable with all unknown `extensions`
+ignored. `tools/verify.py` checks all six.
 
 ## 4. Scenarios and revisions in practice
 
@@ -447,12 +626,18 @@ Every document declares `conformance`. The profile gates the
 COMPUTATIONAL features used - identity fields (`bid_id`, `variant`),
 `references`, and `extensions` are allowed in every profile.
 
-| Profile | sites / execution_site | episodes / episode | incentives |
-|---|---|---|---|
-| `M1` | no | no | at most 1, document-wide |
-| `M1-Multisite` | yes | no | any number, each site-scoped |
-| `M1-Series` | no | yes | at most 1, document-wide |
-| `M1-Full` | yes | yes | any number, each site-scoped |
+| Profile | sites / execution_site | episodes / episode | vendors / vendor / subbids | incentives |
+|---|---|---|---|---|
+| `M1` | no | no | no | at most 1, document-wide |
+| `M1-Multisite` | yes | no | no | any number, each site-scoped |
+| `M1-Series` | no | yes | no | at most 1, document-wide |
+| `M1-Vendors` | no | no | yes | at most 1, document-wide |
+| `M1-Full` | yes | yes | yes | any number, each site-scoped |
+
+"Vendors" as a feature means a second declared vendor, an item `vendor`
+tag, a `by_vendor` block or a `subbids` entry; declaring only the prime
+in `parties.vendors` is allowed in every profile. Sites plus vendors
+without episodes declares `M1-Full`.
 
 A file MUST NOT use a feature its declared profile excludes (verified).
 A file MAY declare a larger profile than it uses. Readers reject files
@@ -495,37 +680,55 @@ engines, services, and models built on it remain their authors'
 property. (Precedent: ACES - academy-published first, SMPTE-ratified
 second. Precedent for the open-format/closed-tooling split: PDF, USD.)
 
-## 8. Changes since v0.2 (and why)
+## 8. Changes since v0.3 (and why)
 
 | Change | Why |
 |---|---|
-| Per-item `discount` (0..1) + `totals.discount_total` | Real bids ship with discounts - per line and across the bid. v0.2 could only bake the net into prices, destroying the gross/discount story a client statement and a renegotiation both need. Item-level keeps every rollup a plain sum and makes mixed discounting free. |
-| `overheads` percentage lines + `totals.overhead_total` | Production overhead and contingency are percentages OF the work, not fixed lines: change a shot's efforts and the overhead must rescale. That recompute-on-change is precisely the core-inclusion test. Site-neutral and partition-excluded by definition. |
-| Per-item `labour_share` override | The v0.2 incentive model smeared one blended labour share across every item, so per-item credits were fiction the moment a bid mixed artist work with purchases. The item override keeps the simple linear model AND makes per-item credits track reality. Program intricacies (caps, top-offs) stay in the tax service / extensions. |
-| Rates convention stated normatively | Every rate, share, and discount in the format is a 0..1 decimal. Mixed 0..100 / 0..1 conventions are a classic silent-wrong-answer generator. |
-| `CHANGELOG.md` | The version history moved out of this section into a proper changelog; this section now only diffs against the immediately-prior draft. |
-| Verifier: handle uniqueness enforced (0.2.x fix, carried) | A duplicated site key silently double-priced a test document (last declaration won). Uniqueness of every handle - site keys, episode codes, shot/line-item ids, dept and shot-type keys, overhead keys - is now normative (section 3) and verifier-enforced. |
+| `parties.vendors[]` (one prime, subs), `vendor` tag on items, `totals.by_vendor` | A bid larger than one shop has a prime and subs. 0.3 named one vendor, so the prime's file either lied about who does what or hid it in extensions. Handles, not names, so a sub's later document can be matched. |
+| `subbids[]` - the sub's own document nested whole, with identity and digest, priced as the master says | A sub-bid is the evidence the prime's number rests on; evidence travels with the claim, and a file a dumb tool cannot open by itself cannot be trusted by itself (the scenarios rule). The prime carries the sub's price; a markup is a line, never a silently repriced item. |
+| Vendor rate cards first in rate resolution | A sub that bids day rates prices its items from its own card; the site card and the document card follow, unchanged from 0.3. |
+| Money is a decimal string | A JSON number is a binary float in most readers; a bid must not depend on which language opened it. Rates and quantities stay numbers - they are not money. |
+| `digest` required; `provenance` optional | 0.3 had no way to know a document was the one that was sent. The seal is over a canonical form, so it is portable across writers; locked revisions become verifiable. |
+| Incentive `cap` and `basis` | Real programs cap and pay on qualifying labour; 0.3 could say neither. The cap scales one incentive's contributions uniformly, so partition blocks keep reconciling. |
+| ISO 3166 jurisdictions; site `currency` + `fx_rates` promoted from M2 | Open question 3 of 0.3 answered; a site that prices in its own currency converts at a frozen rate the file states, instead of a rate somebody applied off-file. |
+| `.bidio` extension, `application/vnd.bidio+json` | A file has a name that says what it is. |
+| Verifier certifies only with the schema check | 0.3 skipped it with a warning and a file with floats where money strings belong read CONFORMANT. |
+| `M1-Vendors` profile; `M1-Full` covers vendors | The profile table stays the contract: a tool that does not do vendors says so. |
+| `tools/upgrade.py` | A 0.3 file becomes a certified 0.4 file without anyone retyping money. |
 
-The full v0.1 -> v0.2 changelog lives in CHANGELOG.md.
+The full history lives in CHANGELOG.md.
 
 ## 9. Open questions for the group
 
 1. Department vocabulary - adopt the 15 recommended keys, or trim?
 2. Difficulty scale - three levels enough? Per-type or global?
-3. Jurisdiction codes in `sites` - free string today; adopt ISO 3166-2?
-4. Incentive model - is the per-item formula acceptable for M1-class
-   profiles, with the tax service handling real program complexity?
-5. Scenario vocabulary - free `variant` strings, or a recommended set?
-6. Series workflow - should the group RECOMMEND one-document-per-episode
+3. Incentive model - is the per-item formula with `basis` and `cap`
+   acceptable for M1-class profiles, with the tax service handling the
+   rest of real program complexity (top-offs, eligible-cost lists)?
+4. Scenario vocabulary - free `variant` strings, or a recommended set?
+5. Series workflow - should the group RECOMMEND one-document-per-episode
    or one-document-with-tags as the default convention (both stay legal)?
-7. Line-item `kind` list - what is missing for how you bid?
-8. Profile names - happy with `M1 / M1-Multisite / M1-Series / M1-Full`?
+6. Line-item `kind` list - what is missing for how you bid?
+7. Profile names - happy with `M1 / M1-Multisite / M1-Series /
+   M1-Vendors / M1-Full`?
+8. Sub-bid markups - the prime's markup on a sub is a line item or an
+   extension today. Should 0.5 give it a field (`markup` on a vendor,
+   0..1), so a client-facing file can state it without exposing the
+   sub's document?
+9. Money precision - decimal strings carry any precision; should the
+   format REQUIRE at most 2 decimals on reported money (totals) and
+   leave rate cards free?
+10. Digest scope - the seal covers the whole document including
+    `extensions`. Should a company be able to add its private block
+    after signing (a seal over core fields only)?
 
 ---
 Files in this folder: `SPEC.md` (this document), `openbidio.schema.json`
 (machine validation), `CHANGELOG.md` (version history), `LICENSE`
-(CC BY 4.0 spec text, MIT machine artifacts), `fixtures/` (six
-conformance fixtures covering all four profiles plus the v0.3
-discount/overhead/labour_share worked example, totals hand-verified),
-`tools/verify.py` (reference verifier: schema + profile + referential
-integrity + totals + extensions).
+(CC BY 4.0 spec text, MIT machine artifacts), `fixtures/` (eight
+`.bidio` conformance fixtures covering all five profiles: the six 0.3
+fixtures upgraded, plus the 0.4 vendors/sub-bid and currency/cap worked
+examples), `tools/verify.py` (reference verifier: schema + profile +
+referential integrity + totals + digest and sub-bids + extensions),
+`tools/upgrade.py` (0.3 -> 0.4), `tools/test_verify.py` (the verifier
+pinned).

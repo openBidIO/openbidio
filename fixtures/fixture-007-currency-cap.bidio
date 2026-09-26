@@ -1,0 +1,211 @@
+{
+  "bidio": "0.4",
+  "id": "3d4e5f60-7a8b-4c9d-8e0f-1a2b3c4d5e6f",
+  "bid_id": "4e5f6a7b-8c9d-4e0f-9a1b-2c3d4e5f6a7b",
+  "conformance": "M1-Full",
+  "generator": {
+    "name": "openbidio-fixtures",
+    "version": "0.4"
+  },
+  "created_at": "2026-09-25T20:00:00Z",
+  "updated_at": "2026-09-25T20:00:00Z",
+  "provenance": {
+    "generated_at": "2026-09-25T20:00:00Z",
+    "generated_by": "tools/make_fixtures_04.py",
+    "source": {
+      "system": "openbidio-fixtures",
+      "ref": "007"
+    }
+  },
+  "project": {
+    "title": "Fixture Show 007",
+    "code": "FIX007",
+    "kind": "feature"
+  },
+  "parties": {
+    "vendor": {
+      "name": "Example VFX Co",
+      "country": "CA"
+    },
+    "vendors": [
+      {
+        "key": "prime",
+        "name": "Example VFX Co",
+        "role": "prime",
+        "country": "CA"
+      },
+      {
+        "key": "crowd-co",
+        "name": "Crowd Co",
+        "role": "sub",
+        "country": "GB"
+      }
+    ]
+  },
+  "currency": "CAD",
+  "fx_rates": [
+    {
+      "currency": "GBP",
+      "rate": 1.72
+    }
+  ],
+  "sites": [
+    {
+      "key": "mtl",
+      "label": "Montreal",
+      "jurisdiction": "CA-QC",
+      "rate_card": {
+        "comp": "900",
+        "dmp": "850"
+      }
+    },
+    {
+      "key": "lon",
+      "label": "London",
+      "jurisdiction": "GB-ENG",
+      "currency": "GBP",
+      "rate_card": {
+        "comp": "1000",
+        "anim": "1100"
+      }
+    }
+  ],
+  "departments": [
+    {
+      "key": "comp",
+      "label": "Compositing"
+    },
+    {
+      "key": "dmp",
+      "label": "Matte painting"
+    },
+    {
+      "key": "anim",
+      "label": "Animation"
+    }
+  ],
+  "shots": [
+    {
+      "id": "sh-010",
+      "code": "010",
+      "description": "Set extension",
+      "type": "environment",
+      "quantity": 1,
+      "execution_site": "mtl",
+      "efforts": {
+        "comp": 5,
+        "dmp": 4
+      }
+    },
+    {
+      "id": "sh-020",
+      "code": "020",
+      "description": "Creature reveal",
+      "type": "creature",
+      "quantity": 1,
+      "execution_site": "lon",
+      "efforts": {
+        "anim": 10,
+        "comp": 6
+      }
+    },
+    {
+      "id": "sh-030",
+      "code": "030",
+      "description": "Crowd tiles",
+      "type": "creature",
+      "quantity": 2,
+      "execution_site": "lon",
+      "unit_price": "2500",
+      "vendor": "crowd-co",
+      "labour_share": 1.0
+    }
+  ],
+  "line_items": [
+    {
+      "id": "li-1",
+      "label": "Data wrangling",
+      "kind": "data",
+      "quantity": 10,
+      "unit": "day",
+      "unit_cost": "400",
+      "execution_site": "mtl",
+      "labour_share": 1.0
+    }
+  ],
+  "incentives": [
+    {
+      "jurisdiction": "CA-QC",
+      "program": "QPSTC",
+      "sites": [
+        "mtl"
+      ],
+      "labour_share": 0.65,
+      "labour_rate": 0.25,
+      "nonlabour_rate": 0.2
+    },
+    {
+      "jurisdiction": "GB-ENG",
+      "program": "Example UK relief",
+      "sites": [
+        "lon"
+      ],
+      "labour_share": 0.8,
+      "labour_rate": 0.25,
+      "nonlabour_rate": 0.0,
+      "basis": "labour",
+      "cap": "3000"
+    }
+  ],
+  "revision": {
+    "number": 1,
+    "locked": false,
+    "supersedes": null
+  },
+  "award": {
+    "status": "draft"
+  },
+  "totals": {
+    "shots_subtotal": "45740.00",
+    "line_items_subtotal": "4000.00",
+    "gross": "49740.00",
+    "incentive_credit": "5836.75",
+    "net": "43903.25",
+    "by_site": {
+      "mtl": {
+        "shots_subtotal": "7900.00",
+        "line_items_subtotal": "4000.00",
+        "gross": "11900.00",
+        "incentive_credit": "2836.75",
+        "net": "9063.25"
+      },
+      "lon": {
+        "shots_subtotal": "37840.00",
+        "line_items_subtotal": "0.00",
+        "gross": "37840.00",
+        "incentive_credit": "3000.00",
+        "net": "34840.00"
+      }
+    },
+    "by_vendor": {
+      "prime": {
+        "shots_subtotal": "37140.00",
+        "line_items_subtotal": "4000.00",
+        "gross": "41140.00",
+        "incentive_credit": "5030.30",
+        "net": "36109.70"
+      },
+      "crowd-co": {
+        "shots_subtotal": "8600.00",
+        "line_items_subtotal": "0.00",
+        "gross": "8600.00",
+        "incentive_credit": "806.45",
+        "net": "7793.55"
+      }
+    }
+  },
+  "digest": {
+    "algorithm": "sha256",
+    "value": "6c54af9a2abcb7d00b708e0fd8f4db4bd8869aa9469dc7b9dc13b9c5b1857660"
+  }
+}

@@ -3,8 +3,17 @@
 All notable changes to the OpenBidIO (formerly bidIO) format, schema, verifier, and fixtures.
 Pre-1.0 rule: readers match major.minor exactly; minors MAY break.
 
-## Unreleased
+## 0.4 - 2026-09-25 (draft)
 
+The "who does the work" release. Every real bid larger than one shop has
+subcontractors, and 0.3 could only name one vendor, so the prime's file
+either lied about who does what or hid it in extensions. 0.4 makes the
+vendors, their share of the money and their own bids first-class - and
+closes four things the 0.3 review measured as missing: money as floats, a
+document with no seal, an incentive with no cap, and a verifier that
+certified without its schema.
+
+### Name
 - **Renamed: bidIO -> OpenBidIO.** Publishing under the Open* convention of
   the VFX standards the format aims to sit beside (OpenEXR, OpenColorIO,
   OpenTimelineIO). Schema moves to `openbidio.schema.json` with `$id`
@@ -14,6 +23,85 @@ Pre-1.0 rule: readers match major.minor exactly; minors MAY break.
   ratification body is free to rename. Scope note: the format is written
   for VFX bids today but is intended to grow into a post-production-wide
   bidding standard.
+
+### Format
+- **`parties.vendors[]`** `{key, name, role: prime|sub, country?,
+  rate_card?}` - unique handles, EXACTLY ONE prime. `parties.vendor` (the
+  0.3 party) stays and IS the prime (same name, verifier-enforced), so a
+  0.3-shaped reader still finds one vendor. Declaring only the prime is
+  not a computational feature and needs no new profile.
+- **`vendor` tag** on shots and line items: a declared vendor key; an
+  untagged item belongs to the prime. **Rate resolution** for an
+  efforts-priced shot is now vendor card -> site card -> document card.
+  Vendor cards are in the document currency.
+- **`totals.by_vendor`**: the third partition, same block shape and the
+  same full-precision reconciliation invariant as `by_site` /
+  `by_episode`. Overheads belong to no vendor block.
+- **`subbids[]`**: a sub's own standalone 0.4 document nested whole -
+  `{vendor, bid_id, revision, digest, document}`. The nested document is
+  verified on its own; its identity and digest must match the wrapper;
+  and the master's items tagged to that vendor MUST price, before the
+  master's own discounts, to the sub-bid's `gross` (SPEC 2.10, math rule
+  10). A prime carries the sub's price; a markup is the prime's business
+  and lives in the prime's own lines or extensions, never in a silently
+  repriced item.
+- **Profile `M1-Vendors`** (vendors, no sites, no episodes); `M1-Full`
+  now covers vendors too.
+- **Money is a decimal STRING** (`"800"`, `"8623.5"`): rate cards,
+  `unit_price`, `unit_cost`, `cap`, every totals field. A JSON number is
+  a binary float in most readers and 0.1 + 0.2 is the bug the format
+  exists to prevent. Rates, shares, discounts (0..1), quantities, days and
+  `fx_rates.rate` stay numbers - they are not money. (Alternative
+  considered: integer minor units; rejected because a rate card in whole
+  currency units is what people read and write.)
+- **`digest`** (required): `{algorithm: "sha256", value}` over the
+  canonical form of the document without its `digest` member (keys
+  sorted, no whitespace, UTF-8). A document that was edited after it was
+  written fails its own seal. **`provenance`** (optional):
+  `{generated_at, generated_by, source: {system, ref, uri}}`.
+- **Incentive `cap`** (money) and **`basis`** (`cost` | `labour`,
+  default `cost`): the incentive's credit over the whole document is at
+  most `cap`, and when it exceeds, every contribution of THAT incentive
+  scales by the same factor so partition blocks still reconcile; `basis:
+  labour` drops the non-labour term (credit = labour share x cost x
+  labour_rate). Real programs cap; 0.3 could not say so.
+- **`jurisdiction` is ISO 3166**: alpha-2 country with an optional 3166-2
+  subdivision (`CA-QC`, `GB-ENG`, `US-NY`, `NZ`) on sites and
+  incentives - the schema refuses "Quebec".
+- **`sites[].currency`** (ISO 4217): a site's rate card and the
+  `unit_price` / `unit_cost` of items tagged to it are in that currency
+  and convert to the document currency through `fx_rates` (document
+  units per one site unit); a site currency with no rate is an integrity
+  failure. Resolves 0.3 open question 3.
+- **File extension `.bidio`**, media type `application/vnd.bidio+json`.
+  The 0.3 `<CODE>_v<NN>.bid.json` spelling retires.
+
+### Schema
+- `$id` is a URL that RESOLVES: `https://openbidio.github.io/openbidio/schema/0.4/openbidio.schema.json` (GitHub Pages serves the repo; `openbidio.dev` was never registered, and an id nobody can fetch is a promise nobody can check). The root `openbidio.schema.json` is the source; `schema/0.4/` is the hosted copy, pinned equal by the tests. `bidio` pattern accepts `0.4(.x)`;
+  `digest` required; `money` / `jurisdiction` / `vendorKey` / `digest` /
+  `provenance` / `subbid` (recursive `$ref: "#"`) definitions;
+  `conformance` gains `M1-Vendors`.
+
+### Verifier
+- **Refuses to certify without the schema check**: a missing
+  `jsonschema` is a problem, not a warning. 0.3 skipped the check and a
+  file with floats where money strings belong read CONFORMANT.
+- Six conditions: schema, profile (now vendors), integrity (vendor keys,
+  one prime, site currencies), totals (vendor rate resolution, currency,
+  caps, `by_vendor`), digest + sub-bids, extensions. The math is a library
+  (`item_costs`, `rollup`, `compute_digest`); only `verify()` prints.
+- `tools/upgrade.py` rewrites a conformant 0.3 file as a certified 0.4
+  file (money strings, the prime, provenance, digest, `.bidio`).
+- `tools/test_verify.py` pins all of the above (pytest).
+
+### Fixtures
+- The six 0.3 fixtures upgraded in place (same numbers, now `.bidio`).
+- NEW `fixture-006-vendors.bidio` (`M1-Vendors`): a prime and a sub,
+  vendor tags, a discounted sub item, `by_vendor`, the sub's own document
+  nested as a sub-bid.
+- NEW `fixture-007-currency-cap.bidio` (`M1-Full`): London pricing in GBP
+  through `fx_rates`, a labour-basis UK credit capped at 3000 CAD beside
+  an uncapped Quebec credit, `by_site` and `by_vendor` together.
 
 ## 0.3 - 2026-07-23 (draft)
 

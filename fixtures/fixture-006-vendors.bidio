@@ -1,0 +1,263 @@
+{
+  "bidio": "0.4",
+  "id": "1b2c3d4e-5f60-4a7b-8c9d-0e1f2a3b4c5d",
+  "bid_id": "2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f",
+  "conformance": "M1-Vendors",
+  "generator": {
+    "name": "openbidio-fixtures",
+    "version": "0.4"
+  },
+  "created_at": "2026-09-25T20:00:00Z",
+  "updated_at": "2026-09-25T20:00:00Z",
+  "provenance": {
+    "generated_at": "2026-09-25T20:00:00Z",
+    "generated_by": "tools/make_fixtures_04.py",
+    "source": {
+      "system": "openbidio-fixtures",
+      "ref": "006"
+    }
+  },
+  "project": {
+    "title": "Fixture Show 006",
+    "code": "FIX006",
+    "client": "Example Pictures",
+    "kind": "feature"
+  },
+  "parties": {
+    "vendor": {
+      "name": "Example VFX Co",
+      "country": "CA"
+    },
+    "client": {
+      "name": "Example Pictures"
+    },
+    "vendors": [
+      {
+        "key": "prime",
+        "name": "Example VFX Co",
+        "role": "prime",
+        "country": "CA"
+      },
+      {
+        "key": "roto-house",
+        "name": "Roto House",
+        "role": "sub",
+        "country": "IN"
+      }
+    ]
+  },
+  "currency": "CAD",
+  "departments": [
+    {
+      "key": "comp",
+      "label": "Compositing"
+    },
+    {
+      "key": "paint",
+      "label": "Paint"
+    },
+    {
+      "key": "matchmove",
+      "label": "Matchmove"
+    }
+  ],
+  "rate_card": {
+    "comp": "800",
+    "paint": "550",
+    "matchmove": "600"
+  },
+  "shots": [
+    {
+      "id": "sh-010",
+      "code": "010",
+      "description": "City extension",
+      "type": "environment",
+      "quantity": 1,
+      "efforts": {
+        "comp": 4,
+        "matchmove": 2
+      }
+    },
+    {
+      "id": "sh-020",
+      "code": "020",
+      "description": "Screen inserts",
+      "type": "cleanup",
+      "quantity": 3,
+      "efforts": {
+        "comp": 1.5,
+        "paint": 0.5
+      }
+    },
+    {
+      "id": "sh-030",
+      "code": "030",
+      "description": "Roto: hero over crowd",
+      "type": "cleanup",
+      "quantity": 1,
+      "unit_price": "4200",
+      "vendor": "roto-house"
+    },
+    {
+      "id": "sh-040",
+      "code": "040",
+      "description": "Roto + paint: wire removal",
+      "type": "cleanup",
+      "quantity": 2,
+      "unit_price": "1550",
+      "vendor": "roto-house",
+      "discount": 0.05
+    }
+  ],
+  "line_items": [
+    {
+      "id": "li-1",
+      "label": "VFX supervision",
+      "kind": "supervision",
+      "quantity": 4,
+      "unit": "day",
+      "unit_cost": "1200"
+    }
+  ],
+  "incentives": [
+    {
+      "jurisdiction": "CA-QC",
+      "program": "QPSTC",
+      "labour_share": 0.65,
+      "labour_rate": 0.25,
+      "nonlabour_rate": 0.2
+    }
+  ],
+  "subbids": [
+    {
+      "vendor": "roto-house",
+      "bid_id": "0a9b8c7d-6e5f-4a4b-8c3d-2e1f0a9b8c7d",
+      "revision": {
+        "number": 1
+      },
+      "digest": {
+        "algorithm": "sha256",
+        "value": "a50702f8b3986306cc309a8ef7a62612c5db2eb180c87f056e608469cb1ca86c"
+      },
+      "document": {
+        "bidio": "0.4",
+        "id": "6f1a2d3c-4b5e-4f60-8a7b-9c0d1e2f3a4b",
+        "bid_id": "0a9b8c7d-6e5f-4a4b-8c3d-2e1f0a9b8c7d",
+        "conformance": "M1",
+        "generator": {
+          "name": "openbidio-fixtures",
+          "version": "0.4"
+        },
+        "created_at": "2026-09-25T20:00:00Z",
+        "updated_at": "2026-09-25T20:00:00Z",
+        "project": {
+          "title": "Fixture Show 006",
+          "code": "FIX006",
+          "kind": "feature"
+        },
+        "parties": {
+          "vendor": {
+            "name": "Roto House",
+            "country": "IN"
+          },
+          "vendors": [
+            {
+              "key": "prime",
+              "name": "Roto House",
+              "role": "prime",
+              "country": "IN"
+            }
+          ],
+          "client": {
+            "name": "Example VFX Co",
+            "country": "CA"
+          }
+        },
+        "currency": "CAD",
+        "shots": [
+          {
+            "id": "sh-030",
+            "code": "030",
+            "description": "Roto: hero over crowd",
+            "type": "cleanup",
+            "quantity": 1,
+            "unit_price": "4200"
+          },
+          {
+            "id": "sh-040",
+            "code": "040",
+            "description": "Roto + paint: wire removal",
+            "type": "cleanup",
+            "quantity": 2,
+            "unit_price": "1550"
+          }
+        ],
+        "incentives": [
+          {
+            "jurisdiction": "IN-MH",
+            "program": "Example state credit",
+            "labour_share": 0.9,
+            "labour_rate": 0.2,
+            "nonlabour_rate": 0.0
+          }
+        ],
+        "revision": {
+          "number": 1,
+          "locked": true,
+          "supersedes": null
+        },
+        "award": {
+          "status": "submitted",
+          "submitted_at": "2026-09-25T20:00:00Z"
+        },
+        "totals": {
+          "shots_subtotal": "7300.00",
+          "line_items_subtotal": "0.00",
+          "gross": "7300.00",
+          "incentive_credit": "1314.00",
+          "net": "5986.00"
+        },
+        "digest": {
+          "algorithm": "sha256",
+          "value": "a50702f8b3986306cc309a8ef7a62612c5db2eb180c87f056e608469cb1ca86c"
+        }
+      }
+    }
+  ],
+  "revision": {
+    "number": 2,
+    "locked": false,
+    "supersedes": null
+  },
+  "award": {
+    "status": "draft"
+  },
+  "totals": {
+    "shots_subtotal": "15970.00",
+    "line_items_subtotal": "4800.00",
+    "gross": "20770.00",
+    "incentive_credit": "4829.03",
+    "net": "15940.98",
+    "discount_total": "155.00",
+    "by_vendor": {
+      "prime": {
+        "shots_subtotal": "8825.00",
+        "line_items_subtotal": "4800.00",
+        "gross": "13625.00",
+        "incentive_credit": "3167.81",
+        "net": "10457.19"
+      },
+      "roto-house": {
+        "shots_subtotal": "7145.00",
+        "line_items_subtotal": "0.00",
+        "gross": "7145.00",
+        "incentive_credit": "1661.21",
+        "net": "5483.79"
+      }
+    }
+  },
+  "digest": {
+    "algorithm": "sha256",
+    "value": "6d9bf4db510993250efd68bdb11e6e1b709c6c7e5ca22b1ca4032fa8731d1ecb"
+  }
+}
