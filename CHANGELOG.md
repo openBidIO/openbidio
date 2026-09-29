@@ -3,6 +3,40 @@
 All notable changes to the OpenBidIO (formerly bidIO) format, schema, verifier, and fixtures.
 Pre-1.0 rule: readers match major.minor exactly; minors MAY break.
 
+## 0.5 - 2026-09-28 (draft)
+
+The "what a price rests on" release. Additive only: every 0.4 document
+becomes a 0.5 document by its version and a new seal (`tools/upgrade.py`).
+
+### Format
+- **`assumptions` on a shot** (string, optional): the conditions the
+  line's price holds under. Informational - nothing normative reads it,
+  no total moves. Distinct from `notes` (commentary). In a vendor's
+  response they are the vendor's; in a request, the requester's.
+- **`in_response_to`** (document, optional): `{bid_id, revision: {number,
+  variant?}, id?}` - the bid (and optionally the exact document) this
+  document answers. A response is an ordinary document of its own bid:
+  no new document type, no new profile.
+
+### Verifier
+- A document's `in_response_to` never names its own `bid_id` (a later
+  proposal for the same bid is a revision) nor its own `id`.
+- A nested sub-bid that carries `in_response_to` answers the master's
+  `bid_id`.
+- FORMAT_VERSION 0.5; the digest message no longer names 0.4.
+
+### Tools and fixtures
+- `tools/upgrade.py` upgrades 0.3 **and 0.4** documents to 0.5; nested
+  sub-bids are upgraded with their master and their wrappers re-sealed;
+  a `.bidio` source is rewritten only with `--in-place` (it used to be
+  written beside itself as `.bidio.bidio`, a bug no 0.3 file could hit).
+- `tools/make_fixtures_04.py` -> `tools/make_fixtures.py`, writing the
+  current version.
+- Fixtures 001-007 upgraded; **fixture-008-vendor-response** (M1) is the
+  sub's bid standing alone, answering fixture-006's bid with its own
+  assumptions; fixture-006 nests it.
+- `schema/0.5/` is the hosted 0.5 schema; `schema/0.4/` stays, frozen.
+
 ## 0.4 - 2026-09-25 (draft)
 
 The "who does the work" release. Every real bid larger than one shop has

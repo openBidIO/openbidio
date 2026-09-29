@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""OpenBidIO v0.4 reference verifier.
+"""OpenBidIO v0.5 reference verifier.
 
 Usage:  python3 verify.py <file.bidio> [more files...]
 
@@ -35,7 +35,7 @@ import sys
 from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 
-FORMAT_VERSION = "0.4"
+FORMAT_VERSION = "0.5"
 TOLERANCE = Decimal("0.005")
 SCHEMA_PATH = Path(__file__).resolve().parent.parent / "openbidio.schema.json"
 PROFILES = ("M1", "M1-Multisite", "M1-Series", "M1-Vendors", "M1-Full")
@@ -276,6 +276,16 @@ def check_integrity(doc, problems):
         problems.append("integrity: revision.variant requires bid_id "
                         "(scenarios need their bid-family anchor)")
 
+    # A RESPONSE NAMES WHAT IT ANSWERS (0.5, SPEC 2.12). A document never
+    # answers its own bid: a later proposal for the same bid is a revision
+    # (revision.supersedes), not a response.
+    irt = doc.get("in_response_to")
+    if isinstance(irt, dict) and doc.get("bid_id") and irt.get("bid_id") == doc.get("bid_id"):
+        problems.append("integrity: in_response_to names this document's own bid_id - a later "
+                        "proposal for the same bid is a revision (revision.supersedes), not a response")
+    if isinstance(irt, dict) and irt.get("id") and irt.get("id") == doc.get("id"):
+        problems.append("integrity: in_response_to.id is this document's own id")
+
 
 # ---------------------------------------------------------------------------
 # 4. the normative math
@@ -481,7 +491,7 @@ def compute_digest(doc) -> dict:
 def check_digest(doc, problems, notes=None):
     declared = doc.get("digest")
     if not declared:
-        problems.append("digest: missing - every 0.4 document carries its own sha256")
+        problems.append("digest: missing - every document since 0.4 carries its own sha256")
         return
     if declared.get("algorithm") != DIGEST_ALGORITHM:
         problems.append(f"digest: algorithm '{declared.get('algorithm')}' is not "
@@ -526,6 +536,11 @@ def check_subbids(doc, entries, problems, notes=None):
             problems.append(f"{ctx}: revision {rev} is not the nested document's {sub_rev}")
         if (sb.get("digest") or {}).get("value") != (sub.get("digest") or {}).get("value"):
             problems.append(f"{ctx}: digest is not the nested document's digest")
+        # a sub-bid that says what it answers answers THIS bid (0.5, SPEC 2.12)
+        sub_irt = sub.get("in_response_to")
+        if isinstance(sub_irt, dict) and doc.get("bid_id") and sub_irt.get("bid_id") != doc.get("bid_id"):
+            problems.append(f"{ctx}: the nested document answers bid '{sub_irt.get('bid_id')}', "
+                            f"not this master's bid '{doc.get('bid_id')}'")
         vendor = vendors.get(sb.get("vendor")) or {}
         sub_prime = next((v for v in vendors_declared(sub) if v.get("role") == "prime"), None)
         sub_name = (sub_prime or (sub.get("parties") or {}).get("vendor") or {}).get("name")

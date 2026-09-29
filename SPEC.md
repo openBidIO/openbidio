@@ -1,16 +1,17 @@
-# OpenBidIO v0.4 - the bid document format (DRAFT for the group)
+# OpenBidIO v0.5 - the bid document format (DRAFT for the group)
 
-Status: **draft 0.4, for discussion.** Supersedes draft 0.3 (2026-07-23).
-This revision says **who does the work**: a bid larger than one shop has
-a prime and its subcontractors, and 0.3 could only name one vendor, so a
-prime's file either lied about who does what or hid it in extensions.
-0.4 makes vendors, their share of the money (`totals.by_vendor`) and
-their own bids (`subbids`, nested whole) first-class. It also closes four
-things the 0.3 review measured as missing: money written as binary
-floats, a document with no seal, an incentive with no cap, and a verifier
-that certified without its schema. Section 8 lists exactly what changed
-and why; section 9 lists the open questions. CHANGELOG.md carries the
-full version history.
+Status: **draft 0.5, for discussion.** Supersedes draft 0.4 (2026-09-25).
+This revision says **what a price rests on and what it answers**. A shot
+line now carries its `assumptions` - the conditions the price holds under
+("clean plate supplied", "one client review round"), which every bid
+states and which 0.4 could only bury in `notes`. And a vendor's bid can
+name the bid it answers (`in_response_to`), so the prime's request, the
+sub's response and the sub-bid the prime nests are one traceable thread.
+0.5 only ADDS optional fields: no computation changes and no 0.4 file
+has to be rewritten beyond its version (`tools/upgrade.py`). 0.4 made
+vendors, their money (`totals.by_vendor`) and their own bids (`subbids`)
+first-class; section 8 lists what changed since 0.4 and why; section 9
+the open questions. CHANGELOG.md carries the full version history.
 
 **Convention: every rate, share, and discount in OpenBidIO is a 0..1
 decimal** (0.10 = 10%). No field anywhere in the format uses 0..100.
@@ -60,7 +61,7 @@ as a group decision.
 
 ```json
 {
-  "bidio": "0.4",
+  "bidio": "0.5",
   "id": "b7d9c2e4-1f3a-4c8b-9e2d-5a6f7c8d9e0f",
   "bid_id": "0f4e2d9a-8c1b-4a7e-b3d5-6c9f8e7a2b1c",
   "conformance": "M1",
@@ -237,6 +238,7 @@ Series bids declare their episodes and tag items to them:
   "discount": 0.10,
   "labour_share": 0.8,
   "notes": "",
+  "assumptions": "Clean plate supplied.\nOne client review round.",
   "extensions": {}
 }
 ```
@@ -262,6 +264,13 @@ Series bids declare their episodes and tag items to them:
   stock-footage purchase carries `labour_share: 0`, a pure-artist shot
   `1`. See 2.6.
 - `execution_site` / `episode`: optional membership tags (2.2, 2.3).
+- `assumptions` (NEW in 0.5): the conditions THIS line's price holds
+  under, as text - one per line is the convention. Informational: nothing
+  normative reads it, no total moves with it. Distinct from `notes`,
+  which is free commentary: a reader shows assumptions beside the price
+  because a price without its assumptions is not comparable to another
+  vendor's. In a vendor's response (2.12) they are the VENDOR's
+  assumptions; a request carries the requester's.
 
 ### 2.5 Line items (non-shot costs)
 
@@ -451,7 +460,7 @@ vendor; 0.4 names them all and says which item is whose.
     "bid_id": "0a9b8c7d-6e5f-4a4b-8c3d-2e1f0a9b8c7d",
     "revision": { "number": 1 },
     "digest": { "algorithm": "sha256", "value": "...the nested document's digest..." },
-    "document": { "bidio": "0.4", "id": "...", "conformance": "M1", ... } }
+    "document": { "bidio": "0.5", "id": "...", "conformance": "M1", ... } }
 ]
 ```
 
@@ -471,7 +480,7 @@ vendor; 0.4 names them all and says which item is whose.
 - `subbids[]`: the sub's OWN OpenBidIO document, nested whole, with the
   three fields that identify it outside (`bid_id`, `revision`) and seal
   it (`digest`, equal to the nested document's own). Every nested
-  document is a standalone, conformant 0.4 file: a reader that ignores
+  document is a standalone, conformant file of the master's version: a reader that ignores
   `subbids` loses nothing it needs to recompute the master; a reader
   that opens one gets the sub's bid exactly as the sub sent it.
   **The prime carries the sub's price**: the master's items tagged to
@@ -510,6 +519,36 @@ open by itself is a file that cannot be trusted by itself.
 - **File**: extension `.bidio`, media type `application/vnd.bidio+json`.
   The 0.3 `<CODE>_v<NN>.bid.json` spelling retires; a writer that keeps
   the `<CODE>_v<NN>` stem names the file `<CODE>_v<NN>.bidio`.
+
+### 2.12 Responses (NEW in 0.5)
+
+A bid often starts as a REQUEST: the prime sends a sub the shots it wants
+priced, and the sub answers with its own bid. 0.4 could nest the answer
+(2.10) but could not say what it answered, so a sub's file standing alone
+was a price for shots nobody could trace back to the request.
+
+```json
+"in_response_to": {
+  "bid_id": "2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f",
+  "revision": { "number": 1 },
+  "id": "1b2c3d4e-5f60-4a7b-8c9d-0e1f2a3b4c5d"
+}
+```
+
+- A response is an **ordinary document** - the responder's own bid, with
+  its own `bid_id`, `revision` and `digest` - that names the bid it
+  answers: `bid_id` + `revision` (with its `variant` for a scenario), and
+  optionally the exact document `id` it answered.
+- It never names its own `bid_id`: a later proposal for the same bid is a
+  revision (`revision.supersedes`, 2.1), not a response.
+- Nested as a sub-bid (2.10), a response answers THE MASTER'S bid: its
+  `in_response_to.bid_id` equals the master's `bid_id`. A sub-bid without
+  `in_response_to` is legal (the sub sent a file that did not say).
+- Informational like `assumptions`: nothing normative reads it; a reader
+  uses it to line a response up against its request.
+
+No new document type and no new profile: a response is recognised by the
+field, and every conformance profile may carry it.
 
 ## 3. Normative computation (what "conformant" means)
 
@@ -680,23 +719,18 @@ engines, services, and models built on it remain their authors'
 property. (Precedent: ACES - academy-published first, SMPTE-ratified
 second. Precedent for the open-format/closed-tooling split: PDF, USD.)
 
-## 8. Changes since v0.3 (and why)
+## 8. Changes since v0.4 (and why)
 
 | Change | Why |
 |---|---|
-| `parties.vendors[]` (one prime, subs), `vendor` tag on items, `totals.by_vendor` | A bid larger than one shop has a prime and subs. 0.3 named one vendor, so the prime's file either lied about who does what or hid it in extensions. Handles, not names, so a sub's later document can be matched. |
-| `subbids[]` - the sub's own document nested whole, with identity and digest, priced as the master says | A sub-bid is the evidence the prime's number rests on; evidence travels with the claim, and a file a dumb tool cannot open by itself cannot be trusted by itself (the scenarios rule). The prime carries the sub's price; a markup is a line, never a silently repriced item. |
-| Vendor rate cards first in rate resolution | A sub that bids day rates prices its items from its own card; the site card and the document card follow, unchanged from 0.3. |
-| Money is a decimal string | A JSON number is a binary float in most readers; a bid must not depend on which language opened it. Rates and quantities stay numbers - they are not money. |
-| `digest` required; `provenance` optional | 0.3 had no way to know a document was the one that was sent. The seal is over a canonical form, so it is portable across writers; locked revisions become verifiable. |
-| Incentive `cap` and `basis` | Real programs cap and pay on qualifying labour; 0.3 could say neither. The cap scales one incentive's contributions uniformly, so partition blocks keep reconciling. |
-| ISO 3166 jurisdictions; site `currency` + `fx_rates` promoted from M2 | Open question 3 of 0.3 answered; a site that prices in its own currency converts at a frozen rate the file states, instead of a rate somebody applied off-file. |
-| `.bidio` extension, `application/vnd.bidio+json` | A file has a name that says what it is. |
-| Verifier certifies only with the schema check | 0.3 skipped it with a warning and a file with floats where money strings belong read CONFORMANT. |
-| `M1-Vendors` profile; `M1-Full` covers vendors | The profile table stays the contract: a tool that does not do vendors says so. |
-| `tools/upgrade.py` | A 0.3 file becomes a certified 0.4 file without anyone retyping money. |
+| `assumptions` on a shot | Every bid states the conditions its prices hold under, and vendors are compared on them as much as on the number. 0.4 could only put them in `notes`, which is free commentary, so no reader could show a vendor's assumptions beside its price. Text, informational: no total moves. |
+| `in_response_to` {`bid_id`, `revision`, `id`?} | A sub's bid answers a prime's request. 0.4 nested the answer but could not say what it answered, so a sub's file standing alone could not be traced to the request. A response is an ordinary document naming what it answers - no new document type. |
+| A nested response answers the master's bid (verifier) | A sub-bid nested in a master that says it answered a different bid is evidence for another claim. |
+| `tools/upgrade.py` 0.4 -> 0.5; `tools/make_fixtures.py` writes the current version | 0.5 only adds optional fields: an upgrade is the version, the nested sub-bids and a new seal - no money is retyped. |
 
-The full history lives in CHANGELOG.md.
+The changes of 0.4 (vendors, sub-bids, money strings, digest, cap and
+basis, ISO jurisdictions, `.bidio`) and of every earlier version live in
+CHANGELOG.md.
 
 ## 9. Open questions for the group
 
@@ -725,10 +759,13 @@ The full history lives in CHANGELOG.md.
 ---
 Files in this folder: `SPEC.md` (this document), `openbidio.schema.json`
 (machine validation), `CHANGELOG.md` (version history), `LICENSE`
-(CC BY 4.0 spec text, MIT machine artifacts), `fixtures/` (eight
-`.bidio` conformance fixtures covering all five profiles: the six 0.3
-fixtures upgraded, plus the 0.4 vendors/sub-bid and currency/cap worked
-examples), `tools/verify.py` (reference verifier: schema + profile +
-referential integrity + totals + digest and sub-bids + extensions),
-`tools/upgrade.py` (0.3 -> 0.4), `tools/test_verify.py` (the verifier
-pinned).
+(CC BY 4.0 spec text, MIT machine artifacts), `schema/0.4/` and
+`schema/0.5/` (the hosted copies, each frozen at its version), `fixtures/`
+(nine `.bidio` conformance fixtures covering all five profiles: the six 0.3
+fixtures upgraded, the 0.4 vendors/sub-bid and currency/cap worked
+examples, and the 0.5 vendor response with its assumptions, which the
+vendors fixture nests), `tools/verify.py` (reference verifier: schema +
+profile + referential integrity + totals + digest and sub-bids +
+extensions), `tools/upgrade.py` (0.3 or 0.4 -> 0.5), `tools/make_fixtures.py`
+(the worked examples, computed independently), `tools/test_verify.py` (the
+verifier pinned).
