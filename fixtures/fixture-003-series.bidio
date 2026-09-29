@@ -1,5 +1,5 @@
 {
-  "bidio": "0.4",
+  "bidio": "0.5",
   "id": "f4ae60b0-42a1-42d1-ac9d-f45ad2a61bd2",
   "bid_id": "a70c65af-e29d-4c80-a5b7-f2e4e4c73cbc",
   "conformance": "M1-Series",
@@ -170,15 +170,15 @@
   },
   "extensions": {},
   "provenance": {
-    "generated_at": "2026-09-26T01:35:57Z",
-    "generated_by": "openbidio tools/upgrade.py 0.3->0.4",
+    "generated_at": "2026-09-29T02:06:33Z",
+    "generated_by": "openbidio tools/upgrade.py 0.4->0.5",
     "source": {
       "system": "openbidio",
-      "ref": "0.3 document f4ae60b0-42a1-42d1-ac9d-f45ad2a61bd2"
+      "ref": "0.4 document f4ae60b0-42a1-42d1-ac9d-f45ad2a61bd2"
     }
   },
   "digest": {
     "algorithm": "sha256",
-    "value": "b0fa3a5b31a25be22d7e695557fbeb4ff6b443090d13a57b0aca32b7b1a85a8c"
+    "value": "78ad21bc8cb43e00d72efddfad6fe78e6d4f0d20464629847ceaecb5388eceed"
   }
 }

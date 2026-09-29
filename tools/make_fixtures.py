@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
-"""Write the two fixtures that are NEW in 0.4, with their totals computed
+"""Write the fixtures that are NEW since 0.4, with their totals computed
 by plain arithmetic here (independently of verify.py's math) and then
-certified by the verifier before they are written. Re-runnable.
+certified by the verifier before they are written. Re-runnable; writes the
+CURRENT version (verify.FORMAT_VERSION). (Was make_fixtures_04.py.)
 
   fixture-006-vendors.bidio       M1-Vendors: a prime and a sub, vendor
                                   tags, by_vendor, the sub's own document
                                   nested as a sub-bid
+  fixture-008-vendor-response.bidio  M1 (0.5): the sub's bid standing alone -
+                                  a RESPONSE naming the prime's bid it
+                                  answers (in_response_to) with the sub's
+                                  own assumptions per shot; 006 nests it
   fixture-007-currency-cap.bidio  M1-Full: a site pricing in its own
                                   currency through fx_rates, an incentive
                                   with a cap and a labour basis, by_site
@@ -43,23 +48,28 @@ def finish(doc):
 
 # ── 006: the sub's own bid, then the master that nests it ──────────────────
 
+#: the prime's bid on Fixture Show 006; the sub's document answers it (0.5)
+MASTER_006_BID_ID = "2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f"
+
 def sub_document():
     # Roto House bids two shots to the prime, flat prices, one credit.
     shots = [
         {"id": "sh-030", "code": "030", "description": "Roto: hero over crowd", "type": "cleanup",
-         "quantity": 1, "unit_price": "4200"},
+         "quantity": 1, "unit_price": "4200",
+         "assumptions": "Hair roto to the 2K proxy edge; motion blur from the plate.\nOne client review round."},
         {"id": "sh-040", "code": "040", "description": "Roto + paint: wire removal", "type": "cleanup",
-         "quantity": 2, "unit_price": "1550"},
+         "quantity": 2, "unit_price": "1550",
+         "assumptions": "Clean plate supplied for each shot."},
     ]
     # base = 4200 + 2*1550 = 7300; incentive: ls 0.9 * 0.20 + 0.1 * 0 = 0.18
     shots_subtotal = Decimal("7300")
     credit = shots_subtotal * Decimal("0.18")
     doc = {
-        "bidio": "0.4",
+        "bidio": V.FORMAT_VERSION,
         "id": "6f1a2d3c-4b5e-4f60-8a7b-9c0d1e2f3a4b",
         "bid_id": "0a9b8c7d-6e5f-4a4b-8c3d-2e1f0a9b8c7d",
         "conformance": "M1",
-        "generator": {"name": "openbidio-fixtures", "version": "0.4"},
+        "generator": {"name": "openbidio-fixtures", "version": V.FORMAT_VERSION},
         "created_at": STAMP, "updated_at": STAMP,
         "project": {"title": "Fixture Show 006", "code": "FIX006", "kind": "feature"},
         "parties": {"vendor": {"name": "Roto House", "country": "IN"},
@@ -70,6 +80,8 @@ def sub_document():
         "incentives": [{"jurisdiction": "IN-MH", "program": "Example state credit",
                         "labour_share": 0.9, "labour_rate": 0.20, "nonlabour_rate": 0.0}],
         "revision": {"number": 1, "locked": True, "supersedes": None},
+        # 0.5: the RESPONSE names the prime's bid it answers (006's master)
+        "in_response_to": {"bid_id": MASTER_006_BID_ID, "revision": {"number": 1}},
         "award": {"status": "submitted", "submitted_at": STAMP},
         "totals": block(shots_subtotal, Decimal(0), credit),
     }
@@ -112,13 +124,13 @@ def master_006(sub):
         "roto-house": block(sub_cost, Decimal(0), credit_sub),
     }
     doc = {
-        "bidio": "0.4",
+        "bidio": V.FORMAT_VERSION,
         "id": "1b2c3d4e-5f60-4a7b-8c9d-0e1f2a3b4c5d",
-        "bid_id": "2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f",
+        "bid_id": MASTER_006_BID_ID,
         "conformance": "M1-Vendors",
-        "generator": {"name": "openbidio-fixtures", "version": "0.4"},
+        "generator": {"name": "openbidio-fixtures", "version": V.FORMAT_VERSION},
         "created_at": STAMP, "updated_at": STAMP,
-        "provenance": {"generated_at": STAMP, "generated_by": "tools/make_fixtures_04.py",
+        "provenance": {"generated_at": STAMP, "generated_by": "tools/make_fixtures.py",
                        "source": {"system": "openbidio-fixtures", "ref": "006"}},
         "project": {"title": "Fixture Show 006", "code": "FIX006", "client": "Example Pictures",
                     "kind": "feature"},
@@ -196,13 +208,13 @@ def master_007():
         "crowd-co": block(lon_sub, Decimal(0), uk_030),
     }
     doc = {
-        "bidio": "0.4",
+        "bidio": V.FORMAT_VERSION,
         "id": "3d4e5f60-7a8b-4c9d-8e0f-1a2b3c4d5e6f",
         "bid_id": "4e5f6a7b-8c9d-4e0f-9a1b-2c3d4e5f6a7b",
         "conformance": "M1-Full",
-        "generator": {"name": "openbidio-fixtures", "version": "0.4"},
+        "generator": {"name": "openbidio-fixtures", "version": V.FORMAT_VERSION},
         "created_at": STAMP, "updated_at": STAMP,
-        "provenance": {"generated_at": STAMP, "generated_by": "tools/make_fixtures_04.py",
+        "provenance": {"generated_at": STAMP, "generated_by": "tools/make_fixtures.py",
                        "source": {"system": "openbidio-fixtures", "ref": "007"}},
         "project": {"title": "Fixture Show 007", "code": "FIX007", "kind": "feature"},
         "parties": {
@@ -242,7 +254,8 @@ def master_007():
 def main():
     sub = sub_document()
     for name, doc in (("fixture-006-vendors.bidio", master_006(sub)),
-                      ("fixture-007-currency-cap.bidio", master_007())):
+                      ("fixture-007-currency-cap.bidio", master_007()),
+                      ("fixture-008-vendor-response.bidio", sub)):
         (FIX / name).write_text(json.dumps(doc, indent=2, ensure_ascii=False) + "\n")
         print(f"wrote {name}: gross {doc['totals']['gross']} credit {doc['totals']['incentive_credit']} "
               f"net {doc['totals']['net']} {doc['currency']}")

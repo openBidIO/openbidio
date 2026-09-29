@@ -1,6 +1,6 @@
-"""The 0.4 verifier, pinned: every fixture certifies; the things 0.4 added
-refuse in words when they are wrong; a 0.3 file upgrades to a certified
-0.4 file. Run: .venv/bin/python -m pytest tools/"""
+"""The 0.5 verifier, pinned: every fixture certifies; the things 0.4 and 0.5
+added refuse in words when they are wrong; a 0.3 or 0.4 file upgrades to a
+certified 0.5 file. Run: .venv/bin/python -m pytest tools/"""
 import copy
 import json
 import pathlib
@@ -33,9 +33,10 @@ def _resign(doc):
     return doc
 
 
-def test_there_are_eight_fixtures_and_all_are_bidio_files():
-    assert len(FIXTURES) == 8
-    assert not list(FIX.glob("*.bid.json")), "0.3 files retired; 0.4 files are .bidio"
+def test_there_are_nine_fixtures_and_all_are_bidio_files():
+    assert len(FIXTURES) == 9
+    assert not list(FIX.glob("*.bid.json")), "0.3 files retired; 0.4+ files are .bidio"
+    assert all(_load(p.name)["bidio"] == V.FORMAT_VERSION for p in FIXTURES), "every fixture speaks 0.5"
 
 
 @pytest.mark.parametrize("path", FIXTURES, ids=[p.name for p in FIXTURES])
@@ -185,7 +186,7 @@ def test_jurisdiction_is_iso_3166():
     assert any(p.startswith("schema: sites/0/jurisdiction") for p in problems)
 
 
-def test_upgrade_turns_a_0_3_file_into_a_certified_0_4_file():
+def test_upgrade_turns_a_0_3_file_into_a_certified_0_5_file():
     old = {
         "bidio": "0.3", "id": "be78b485-26fd-404c-b31a-f2873dabe19e", "conformance": "M1",
         "project": {"title": "Old"}, "parties": {"vendor": {"name": "Old Co", "country": "CA"}},
@@ -197,25 +198,80 @@ def test_upgrade_turns_a_0_3_file_into_a_certified_0_4_file():
                    "incentive_credit": 0, "net": 3475.45},
     }
     new = U.upgrade(old)
-    assert new["bidio"] == "0.4" and new["rate_card"] == {"comp": "800", "fx": "950.5"}
+    assert new["bidio"] == "0.5" and new["rate_card"] == {"comp": "800", "fx": "950.5"}
     assert new["shots"][1]["unit_price"] == "100.1" and new["line_items"][0]["unit_cost"] == "1200"
     assert new["totals"]["gross"] == "3475.45" and new["totals"]["incentive_credit"] == "0"
     assert new["parties"]["vendors"] == [{"key": "prime", "name": "Old Co", "role": "prime", "country": "CA"}]
     assert new["parties"]["vendor"] == {"name": "Old Co", "country": "CA"}, "the 0.3 party stays"
     assert new["digest"] == V.compute_digest(new) and new["provenance"]["source"]["ref"].endswith(old["id"])
     assert _problems(new) == []
-    with pytest.raises(ValueError, match="takes a 0.3 document"):
+    with pytest.raises(ValueError, match="takes a 0.3 or 0.4 document"):
         U.upgrade(new)
 
 
 def test_upgrade_names_the_file_bidio():
     assert U.out_path(pathlib.Path("/x/FIX_v01.bid.json"), None) == pathlib.Path("/x/FIX_v01.bidio")
+    assert U.out_path(pathlib.Path("/x/FIX_v01.bidio"), None) == pathlib.Path("/x/FIX_v01.bidio"), \
+        "a .bidio source is not renamed .bidio.bidio (main refuses to overwrite it without --in-place)"
     assert U.out_path(pathlib.Path("/x/a.json"), pathlib.Path("/y")) == pathlib.Path("/y/a.bidio")
 
 
 def test_the_schema_id_resolves_to_the_hosted_copy_and_the_two_are_one():
     root = json.loads((HERE.parent / "openbidio.schema.json").read_text())
-    hosted = json.loads((HERE.parent / "schema" / "0.4" / "openbidio.schema.json").read_text())
-    assert root == hosted, "the hosted copy under schema/0.4/ is the root file, byte for byte in meaning"
-    assert root["$id"] == "https://openbidio.github.io/openbidio/schema/0.4/openbidio.schema.json"
-    assert root["$id"].endswith("/schema/0.4/openbidio.schema.json"), "the id names the version it describes"
+    hosted = json.loads((HERE.parent / "schema" / "0.5" / "openbidio.schema.json").read_text())
+    assert root == hosted, "the hosted copy under schema/0.5/ is the root file, byte for byte in meaning"
+    assert root["$id"] == "https://openbidio.github.io/openbidio/schema/0.5/openbidio.schema.json"
+    older = json.loads((HERE.parent / "schema" / "0.4" / "openbidio.schema.json").read_text())
+    assert older["$id"].endswith("/schema/0.4/openbidio.schema.json"), "0.4 stays hosted, frozen"
+
+
+# ── 0.5: shot assumptions, and a response names what it answers ─────────────
+
+def test_assumptions_are_text_on_a_shot_and_change_no_total():
+    doc = _load("fixture-008-vendor-response.bidio")
+    assert "Clean plate" in doc["shots"][1]["assumptions"]
+    bare = copy.deepcopy(doc)
+    for sh in bare["shots"]:
+        sh.pop("assumptions", None)
+    assert _problems(_resign(bare)) == [], "the totals do not move without them"
+    doc["shots"][0]["assumptions"] = 7
+    assert any("assumptions" in p for p in _problems(_resign(doc))), "text, never a number"
+
+
+def test_a_response_names_the_bid_it_answers_never_its_own():
+    doc = _load("fixture-008-vendor-response.bidio")
+    assert doc["in_response_to"]["bid_id"] == _load("fixture-006-vendors.bidio")["bid_id"]
+    doc["in_response_to"]["bid_id"] = doc["bid_id"]
+    assert any("revision (revision.supersedes), not a response" in p for p in _problems(_resign(doc)))
+    doc = _load("fixture-008-vendor-response.bidio")
+    del doc["in_response_to"]["revision"]
+    assert any("revision" in p for p in _problems(_resign(doc))), "a response names the revision it answers"
+
+
+def test_a_nested_response_answers_the_master_it_is_nested_in():
+    master = _load("fixture-006-vendors.bidio")
+    assert master["subbids"][0]["document"]["in_response_to"]["bid_id"] == master["bid_id"]
+    sub = master["subbids"][0]["document"]
+    sub["in_response_to"]["bid_id"] = "11111111-2222-4333-8444-555555555555"
+    _resign(sub)
+    master["subbids"][0]["digest"] = dict(sub["digest"])
+    assert any("answers bid '11111111" in p for p in _problems(_resign(master)))
+
+
+def test_a_0_5_verifier_refuses_a_0_4_file_cleanly_and_upgrade_carries_it():
+    old = _load("fixture-006-vendors.bidio")
+    old["bidio"] = "0.4"
+    for sb in old["subbids"]:
+        sb["document"]["bidio"] = "0.4"
+        sb["document"].pop("in_response_to", None)
+        for sh in sb["document"]["shots"]:
+            sh.pop("assumptions", None)
+        _resign(sb["document"])
+        sb["digest"] = dict(sb["document"]["digest"])
+    _resign(old)
+    assert any("0.x readers match major.minor exactly" in p for p in _problems(old))
+    new = U.upgrade(old)
+    assert new["bidio"] == "0.5" and new["subbids"][0]["document"]["bidio"] == "0.5"
+    assert new["subbids"][0]["digest"] == new["subbids"][0]["document"]["digest"], "the wrapper takes the new seal"
+    assert new["totals"] == old["totals"], "0.4 -> 0.5 moves no money"
+    assert _problems(new) == []
